@@ -1,0 +1,362 @@
+import { faker } from '@faker-js/faker';
+import {
+  Proposal,
+  CommunityPost,
+  Holiday,
+  CalendarEvent,
+  Notification,
+  User,
+  VoteRecord,
+} from '@/types';
+
+// Seed faker for consistent results during development
+faker.seed(12345);
+
+// Veteran-focused categories and topics
+const veteranCategories = [
+  'Healthcare & Mental Health',
+  'Education & Training',
+  'Housing & Shelter',
+  'Employment & Career',
+  'Family Support',
+  'Emergency Relief',
+  'Community Programs',
+  'Disability Support',
+  'Financial Assistance',
+  'Legal Aid',
+];
+
+const veteranTopics = [
+  'PTSD Treatment Programs',
+  'Job Training Initiatives',
+  'Affordable Housing Projects',
+  'Family Counseling Services',
+  'Emergency Financial Aid',
+  'Veteran Business Loans',
+  'Educational Scholarships',
+  'Healthcare Access',
+  'Disability Benefits',
+  'Legal Support Services',
+  'Community Outreach',
+  'Mental Health Resources',
+  'Career Transition Support',
+  'Housing Assistance',
+  'Food Security Programs',
+];
+
+const veteranAuthors = [
+  'patriot.eth',
+  'veteran.eth',
+  'militaryfamily.eth',
+  'servicemember.eth',
+  'marine.eth',
+  'army.eth',
+  'navy.eth',
+  'airforce.eth',
+  'coastguard.eth',
+  'ranger.eth',
+  'medic.eth',
+  'pilot.eth',
+  'sergeant.eth',
+  'captain.eth',
+  'commander.eth',
+];
+
+// Generate realistic proposal
+export const generateProposal = (id?: string): Proposal => {
+  const topic = faker.helpers.arrayElement(veteranTopics);
+  const author = faker.helpers.arrayElement(veteranAuthors);
+  const status = faker.helpers.arrayElement([
+    'active',
+    'passed',
+    'failed',
+    'pending',
+  ] as const);
+
+  // Generate realistic vote percentages
+  let yesPercentage: number, noPercentage: number, abstainPercentage: number;
+
+  if (status === 'passed') {
+    yesPercentage = faker.number.int({ min: 60, max: 85 });
+    noPercentage = faker.number.int({ min: 5, max: 25 });
+    abstainPercentage = 100 - yesPercentage - noPercentage;
+  } else if (status === 'failed') {
+    noPercentage = faker.number.int({ min: 50, max: 75 });
+    yesPercentage = faker.number.int({ min: 15, max: 40 });
+    abstainPercentage = 100 - yesPercentage - noPercentage;
+  } else if (status === 'pending') {
+    yesPercentage = 0;
+    noPercentage = 0;
+    abstainPercentage = 0;
+  } else {
+    // Active proposal
+    yesPercentage = faker.number.int({ min: 30, max: 70 });
+    noPercentage = faker.number.int({ min: 15, max: 50 });
+    abstainPercentage = 100 - yesPercentage - noPercentage;
+  }
+
+  const timeLeft =
+    status === 'active'
+      ? `${faker.number.int({ min: 1, max: 14 })} days left`
+      : status === 'pending'
+        ? `Starts in ${faker.number.int({ min: 1, max: 7 })} days`
+        : 'Completed';
+
+  return {
+    id: id || faker.string.uuid(),
+    title: topic,
+    author,
+    status,
+    timeLeft,
+    yesPercentage,
+    noPercentage,
+    abstainPercentage,
+    description: `This proposal aims to ${topic.toLowerCase()} for veterans in need. ${faker.lorem.sentences(3)} The initiative will provide comprehensive support and resources to ensure our veterans receive the assistance they deserve.`,
+  };
+};
+
+// Generate multiple proposals
+export const generateProposals = (count: number): Proposal[] => {
+  return Array.from({ length: count }, (_, index) =>
+    generateProposal((index + 1).toString())
+  );
+};
+
+// Generate realistic community post
+export const generateCommunityPost = (id?: string): CommunityPost => {
+  const categories = [
+    'idea',
+    'discussion',
+    'feedback',
+    'announcement',
+  ] as const;
+  const category = faker.helpers.arrayElement(categories);
+  const author = faker.helpers.arrayElement(veteranAuthors);
+  const topic = faker.helpers.arrayElement(veteranTopics);
+
+  const upvotes = faker.number.int({ min: 5, max: 100 });
+  const downvotes = faker.number.int({ min: 0, max: 20 });
+
+  const tags = faker.helpers.arrayElements(
+    [
+      'veterans',
+      'healthcare',
+      'education',
+      'housing',
+      'employment',
+      'mental-health',
+      'family',
+      'community',
+      'benefits',
+      'support',
+      'technology',
+      'accessibility',
+      'funding',
+      'outreach',
+      'partnerships',
+    ],
+    { min: 2, max: 5 }
+  );
+
+  let title: string;
+  let content: string;
+
+  switch (category) {
+    case 'idea':
+      title = `New Initiative: ${topic}`;
+      content = `I propose we implement ${topic.toLowerCase()} to better serve our veteran community. ${faker.lorem.sentences(4)} This would significantly impact veterans by providing essential resources and support.`;
+      break;
+    case 'discussion':
+      title = `Discussion: ${topic} Implementation`;
+      content = `Let's discuss the best approach for ${topic.toLowerCase()}. ${faker.lorem.sentences(3)} What are your thoughts on this initiative?`;
+      break;
+    case 'feedback':
+      title = `Feedback on ${topic}`;
+      content = `I wanted to share my experience with ${topic.toLowerCase()}. ${faker.lorem.sentences(3)} Overall, I think there's room for improvement in this area.`;
+      break;
+    case 'announcement':
+      title = `Update: ${topic} Program`;
+      content = `We're excited to announce progress on ${topic.toLowerCase()}. ${faker.lorem.sentences(3)} Stay tuned for more updates!`;
+      break;
+  }
+
+  return {
+    id: id || faker.string.uuid(),
+    title,
+    content,
+    author: author.replace('.eth', ''),
+    authorAddress: faker.finance.ethereumAddress(),
+    createdAt: faker.date.recent({ days: 30 }),
+    upvotes,
+    downvotes,
+    category,
+    tags,
+    isPromoted: faker.datatype.boolean({ probability: 0.2 }),
+    userVote: faker.helpers.arrayElement([null, 'up', 'down']),
+  };
+};
+
+// Generate multiple community posts
+export const generateCommunityPosts = (count: number): CommunityPost[] => {
+  return Array.from({ length: count }, (_, index) =>
+    generateCommunityPost((index + 1).toString())
+  );
+};
+
+// Generate realistic user
+export const generateUser = (): User => {
+  return {
+    id: faker.string.uuid(),
+    address: faker.finance.ethereumAddress(),
+    ensName: faker.datatype.boolean({ probability: 0.3 })
+      ? faker.helpers.arrayElement(veteranAuthors)
+      : undefined,
+    votingPower: faker.number.int({ min: 100, max: 10000 }),
+  };
+};
+
+// Generate vote record
+export const generateVoteRecord = (
+  proposalId: string,
+  userId: string
+): VoteRecord => {
+  return {
+    proposalId,
+    userId,
+    vote: faker.helpers.arrayElement(['yes', 'no', 'abstain'] as const),
+    timestamp: faker.date.recent({ days: 30 }),
+    votingPower: faker.number.int({ min: 50, max: 1000 }),
+  };
+};
+
+// Generate notification
+export const generateNotification = (userId: string): Notification => {
+  const types = [
+    'vote_reminder',
+    'new_proposal',
+    'community_post',
+    'event_reminder',
+  ] as const;
+  const type = faker.helpers.arrayElement(types);
+
+  let title: string;
+  let message: string;
+
+  switch (type) {
+    case 'vote_reminder':
+      title = 'Vote Reminder';
+      message = `Don't forget to vote on "${faker.helpers.arrayElement(veteranTopics)}" proposal.`;
+      break;
+    case 'new_proposal':
+      title = 'New Proposal';
+      message = `A new proposal "${faker.helpers.arrayElement(veteranTopics)}" is now available for voting.`;
+      break;
+    case 'community_post':
+      title = 'New Community Post';
+      message = `${faker.helpers.arrayElement(veteranAuthors)} shared a new post about ${faker.helpers.arrayElement(veteranTopics).toLowerCase()}.`;
+      break;
+    case 'event_reminder':
+      title = 'Event Reminder';
+      message = `Upcoming voting event for ${faker.helpers.arrayElement(['Veterans Day', 'Memorial Day', 'Independence Day'])}.`;
+      break;
+  }
+
+  return {
+    id: faker.string.uuid(),
+    userId,
+    type,
+    title,
+    message,
+    isRead: faker.datatype.boolean({ probability: 0.7 }),
+    createdAt: faker.date.recent({ days: 7 }),
+    actionUrl:
+      type === 'new_proposal' ? `/proposal/${faker.string.uuid()}` : undefined,
+  };
+};
+
+// Generate calendar event
+export const generateCalendarEvent = (): CalendarEvent => {
+  const types = ['holiday', 'voting', 'community', 'announcement'] as const;
+  const type = faker.helpers.arrayElement(types);
+
+  const holidays = [
+    'Veterans Day',
+    'Memorial Day',
+    'Independence Day',
+    'Flag Day',
+    'Purple Heart Day',
+    'National Medal of Honor Day',
+    'Patriot Day',
+  ];
+
+  const title =
+    type === 'holiday'
+      ? faker.helpers.arrayElement(holidays)
+      : `${faker.helpers.arrayElement(['Community', 'Voting', 'Special'])} Event`;
+
+  return {
+    id: faker.string.uuid(),
+    title,
+    date: faker.date.future({ years: 1 }),
+    type,
+    description: `${title} - ${faker.lorem.sentence()}`,
+    isVotingDay:
+      type === 'voting' || faker.datatype.boolean({ probability: 0.3 }),
+    flagIcon: faker.helpers.arrayElement(['🇺🇸', '🏅', '⭐', '🎖️']),
+    priority: faker.helpers.arrayElement(['high', 'medium', 'low'] as const),
+  };
+};
+
+// Utility functions for generating bulk data
+export const generateBulkData = () => {
+  return {
+    proposals: generateProposals(20),
+    communityPosts: generateCommunityPosts(50),
+    users: Array.from({ length: 100 }, generateUser),
+    calendarEvents: Array.from({ length: 30 }, generateCalendarEvent),
+  };
+};
+
+// Generate realistic VMF balance based on user type
+export const generateVMFBalance = (
+  userType: 'whale' | 'regular' | 'new' = 'regular'
+): number => {
+  switch (userType) {
+    case 'whale':
+      return faker.number.int({ min: 50000, max: 500000 });
+    case 'regular':
+      return faker.number.int({ min: 1000, max: 50000 });
+    case 'new':
+      return faker.number.int({ min: 100, max: 1000 });
+    default:
+      return faker.number.int({ min: 100, max: 10000 });
+  }
+};
+
+// Generate realistic ENS names for veterans
+export const generateVeteranENS = (): string => {
+  const prefixes = [
+    'veteran',
+    'marine',
+    'soldier',
+    'sailor',
+    'airman',
+    'patriot',
+    'hero',
+    'service',
+  ];
+  const suffixes = [
+    'usa',
+    'vet',
+    'mil',
+    'hero',
+    'patriot',
+    'freedom',
+    'liberty',
+  ];
+  const numbers = faker.datatype.boolean({ probability: 0.4 })
+    ? faker.number.int({ min: 1, max: 999 })
+    : '';
+
+  return `${faker.helpers.arrayElement(prefixes)}${numbers}${faker.helpers.arrayElement(suffixes)}.eth`;
+};
