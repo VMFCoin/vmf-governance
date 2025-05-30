@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
-import { baseSepolia } from 'wagmi/chains';
+import { baseSepolia, sepolia } from 'wagmi/chains';
 
 // Configure QueryClient with comprehensive error handling
 const queryClient = new QueryClient({
@@ -86,7 +86,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           modalSize="compact"
-          initialChain={baseSepolia}
+          initialChain={sepolia}
           showRecentTransactions={true}
         >
           {children}

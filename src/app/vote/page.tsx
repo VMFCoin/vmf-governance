@@ -15,15 +15,9 @@ import {
   BarChart3,
   Plus,
 } from 'lucide-react';
-import {
-  Header,
-  Footer,
-  Button,
-  Card,
-  Input,
-  Dropdown,
-  ProposalCard,
-} from '@/components';
+import { Header, Footer, Button, Card, Input, Dropdown } from '@/components';
+import { ProposalCardSkeleton } from '@/components/ui';
+import { TypeSpecificProposalCard } from '@/components/proposals';
 import { mockProposals } from '@/data/mockData';
 import { Proposal } from '@/types';
 
@@ -123,7 +117,7 @@ export default function VotePage() {
   };
 
   return (
-    <main className="min-h-screen bg-backgroundDark">
+    <main className="min-h-screen landing-page-flag">
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -255,7 +249,7 @@ export default function VotePage() {
         {filteredAndSortedProposals.length > 0 ? (
           <div className="grid lg:grid-cols-2 gap-8">
             {filteredAndSortedProposals.map(proposal => (
-              <ProposalCard key={proposal.id} proposal={proposal} />
+              <TypeSpecificProposalCard key={proposal.id} proposal={proposal} />
             ))}
           </div>
         ) : (

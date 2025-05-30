@@ -1,4 +1,9 @@
-export { VotingPower } from './VotingPower';
 export { ProposalCard } from './ProposalCard';
+export { VotingPower } from './VotingPower';
+export { VoteChart } from './VoteChart';
 export { VoteModal } from './VoteModal';
-export { VoteChart, VoteBarChart } from './VoteChart';
+
+// Specialized voting components
+export { HolidayCharityVoting } from './HolidayCharityVoting';
+export { CharityDirectoryVoting } from './CharityDirectoryVoting';
+export { PlatformFeatureVoting } from './PlatformFeatureVoting';

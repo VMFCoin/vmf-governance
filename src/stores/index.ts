@@ -14,12 +14,20 @@ export type { UserState, UserPreferences } from './useUserStore';
 export { useUIStore } from './useUIStore';
 export type { UIState, Toast, Modal } from './useUIStore';
 
+export { useCharityStore } from './useCharityStore';
+export type { CharityState } from './useCharityStore';
+
+export { useHolidayStore } from './useHolidayStore';
+export type { HolidayState } from './useHolidayStore';
+
 // Import stores for the combined hook
 import { useWalletStore } from './useWalletStore';
 import { useProposalStore } from './useProposalStore';
 import { useCommunityStore } from './useCommunityStore';
 import { useUserStore } from './useUserStore';
 import { useUIStore } from './useUIStore';
+import { useCharityStore } from './useCharityStore';
+import { useHolidayStore } from './useHolidayStore';
 
 // Combined store hook for components that need multiple stores
 export const useVMFStores = () => ({
@@ -28,4 +36,6 @@ export const useVMFStores = () => ({
   community: useCommunityStore(),
   user: useUserStore(),
   ui: useUIStore(),
+  charity: useCharityStore(),
+  holiday: useHolidayStore(),
 });

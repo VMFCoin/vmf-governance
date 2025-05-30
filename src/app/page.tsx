@@ -10,11 +10,12 @@ import {
   VotingPower,
   ProposalCard,
 } from '@/components';
+import { TypeSpecificProposalCard } from '@/components/proposals';
 import { mockProposals, mockHolidays } from '@/data/mockData';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-backgroundDark">
+    <main className="min-h-screen landing-page-flag">
       {/* Header */}
       <Header />
 
@@ -121,8 +122,11 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Left Column - Proposals */}
             <div className="space-y-6">
-              {mockProposals.slice(0, 2).map(proposal => (
-                <ProposalCard key={proposal.id} proposal={proposal} />
+              {mockProposals.slice(0, 3).map(proposal => (
+                <TypeSpecificProposalCard
+                  key={proposal.id}
+                  proposal={proposal}
+                />
               ))}
             </div>
 

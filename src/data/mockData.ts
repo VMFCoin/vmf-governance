@@ -4,57 +4,332 @@ import {
   CommunityPost,
   CalendarEvent,
   Notification,
+  Charity,
+  MilitaryHoliday,
+  HolidayCharityProposal,
+  CharityDirectoryProposal,
+  PlatformFeatureProposal,
+  LegacyProposal,
 } from '../types';
 
-export const mockProposals: Proposal[] = [
+// Mock Charities Data
+export const mockCharities: Charity[] = [
   {
-    id: '1',
-    title: 'Charity Selection for 2024',
-    author: 'patriot.eth',
+    id: 'charity-1',
+    name: 'Wounded Warrior Project',
+    description:
+      'Supporting wounded veterans and their families with programs and services.',
+    website: 'https://www.woundedwarriorproject.org',
+    ein: '20-2370934',
+    category: 'disabled_veterans',
+    verificationStatus: 'verified',
+    impactMetrics: {
+      veteransServed: 200000,
+      fundingReceived: 350000000,
+      programs: ['Mental Health', 'Career Counseling', 'Long-term Support'],
+    },
+    documents: [
+      {
+        type: '501c3',
+        url: '/documents/wwp-501c3.pdf',
+        uploadedAt: new Date('2024-01-01'),
+      },
+      {
+        type: 'financial_report',
+        url: '/documents/wwp-financial-2023.pdf',
+        uploadedAt: new Date('2024-01-15'),
+      },
+    ],
+    addedAt: new Date('2023-01-01'),
+    verifiedAt: new Date('2023-01-15'),
+  },
+  {
+    id: 'charity-2',
+    name: 'Team Rubicon',
+    description:
+      'Uniting military veterans with first responders to rapidly deploy emergency response teams.',
+    website: 'https://teamrubiconusa.org',
+    ein: '27-2265587',
+    category: 'veterans',
+    verificationStatus: 'verified',
+    impactMetrics: {
+      veteransServed: 150000,
+      fundingReceived: 75000000,
+      programs: ['Disaster Relief', 'Community Impact', 'Veteran Integration'],
+    },
+    documents: [
+      {
+        type: '501c3',
+        url: '/documents/tr-501c3.pdf',
+        uploadedAt: new Date('2024-01-01'),
+      },
+    ],
+    addedAt: new Date('2023-02-01'),
+    verifiedAt: new Date('2023-02-15'),
+  },
+  {
+    id: 'charity-3',
+    name: 'Operation Homefront',
+    description: 'Building strong, stable, and secure military families.',
+    website: 'https://www.operationhomefront.org',
+    ein: '20-0655443',
+    category: 'military_families',
+    verificationStatus: 'verified',
+    impactMetrics: {
+      veteransServed: 100000,
+      fundingReceived: 45000000,
+      programs: ['Financial Assistance', 'Housing', 'Family Support'],
+    },
+    documents: [
+      {
+        type: '501c3',
+        url: '/documents/oh-501c3.pdf',
+        uploadedAt: new Date('2024-01-01'),
+      },
+    ],
+    addedAt: new Date('2023-03-01'),
+    verifiedAt: new Date('2023-03-15'),
+  },
+  {
+    id: 'charity-4',
+    name: 'Veterans Community Living Centers',
+    description:
+      'Providing housing and support services for homeless veterans.',
+    website: 'https://www.vclc.org',
+    ein: '95-3567890',
+    category: 'general_support',
+    verificationStatus: 'verified',
+    impactMetrics: {
+      veteransServed: 5000,
+      fundingReceived: 12000000,
+      programs: ['Housing', 'Job Training', 'Mental Health Support'],
+    },
+    documents: [
+      {
+        type: '501c3',
+        url: '/documents/vclc-501c3.pdf',
+        uploadedAt: new Date('2024-01-01'),
+      },
+    ],
+    addedAt: new Date('2023-04-01'),
+    verifiedAt: new Date('2023-04-15'),
+  },
+];
+
+// Mock Military Holidays Data
+export const mockMilitaryHolidays: MilitaryHoliday[] = [
+  {
+    id: 'holiday-1',
+    name: 'Veterans Day',
+    date: new Date('2024-11-11'),
+    description: 'A day to honor all military veterans',
+    significance:
+      'Originally called Armistice Day, commemorating the end of World War I',
+    fundAllocation: 100000,
+    isVotingEligible: true,
+    flagIcon: '🇺🇸',
+    category: 'major',
+  },
+  {
+    id: 'holiday-2',
+    name: 'Memorial Day',
+    date: new Date('2024-05-27'),
+    description: 'A day to remember fallen service members',
+    significance: 'Honors those who died while serving in the U.S. military',
+    fundAllocation: 150000,
+    isVotingEligible: true,
+    flagIcon: '🇺🇸',
+    category: 'major',
+  },
+  {
+    id: 'holiday-3',
+    name: 'Armed Forces Day',
+    date: new Date('2024-05-18'),
+    description: 'A day to honor current military service members',
+    significance: 'Celebrates all branches of the U.S. Armed Forces',
+    fundAllocation: 75000,
+    isVotingEligible: true,
+    flagIcon: '⭐',
+    category: 'major',
+  },
+  {
+    id: 'holiday-4',
+    name: 'Purple Heart Day',
+    date: new Date('2024-08-07'),
+    description: 'Honors Purple Heart recipients',
+    significance: 'Recognizes those wounded or killed in service',
+    fundAllocation: 50000,
+    isVotingEligible: true,
+    flagIcon: '💜',
+    category: 'observance',
+  },
+  {
+    id: 'holiday-5',
+    name: 'National Medal of Honor Day',
+    date: new Date('2024-03-25'),
+    description: 'Honors Medal of Honor recipients',
+    significance: 'Recognizes the highest military decoration',
+    fundAllocation: 75000,
+    isVotingEligible: true,
+    flagIcon: '🏅',
+    category: 'observance',
+  },
+];
+
+// Mock Proposals Data - Updated for new type system
+const holidayCharityProposals: HolidayCharityProposal[] = [
+  {
+    id: 'hcp-veterans-day-2024',
+    type: 'holiday_charity',
+    title: 'Veterans Day 2024 - Charity Selection',
+    author: 'system',
     status: 'active',
     timeLeft: '2 days left',
-    yesPercentage: 55,
-    noPercentage: 28,
-    abstainPercentage: 17,
-    description:
-      'Vote on which veteran charity should receive our quarterly donation. This proposal will determine the recipient of $50,000 in funding.',
-  },
-  {
-    id: '2',
-    title: 'Holiday Giveaway Campaign',
-    author: 'militaryfamily.eth',
-    status: 'active',
-    timeLeft: '5 days left',
-    yesPercentage: 60,
-    noPercentage: 15,
-    abstainPercentage: 25,
-    description:
-      'Approve funding for a special holiday campaign to support veteran families during the holiday season.',
-  },
-  {
-    id: '3',
-    title: 'Veterans Education Fund',
-    author: 'education.eth',
-    status: 'passed',
-    timeLeft: 'Completed',
-    yesPercentage: 78,
-    noPercentage: 12,
-    abstainPercentage: 10,
-    description:
-      'Establish a scholarship fund for veterans pursuing higher education. This proposal has been approved and will be implemented next quarter.',
-  },
-  {
-    id: '4',
-    title: 'Mental Health Support Initiative',
-    author: 'wellness.eth',
-    status: 'pending',
-    timeLeft: 'Starts in 3 days',
     yesPercentage: 0,
     noPercentage: 0,
     abstainPercentage: 0,
     description:
-      'Proposal to fund mental health resources and counseling services for veterans in need.',
+      'Select which charity will receive $100,000 in funding for Veterans Day 2024.',
+    createdAt: new Date('2024-01-10'),
+    votingEndsAt: new Date('2024-01-25'),
+    holidayId: 'holiday-1',
+    availableCharities: ['charity-1', 'charity-2', 'charity-3'],
+    isAutoGenerated: true,
+    fundAmount: 100000,
+    votingType: 'charity_selection',
   },
+];
+
+const charityDirectoryProposals: CharityDirectoryProposal[] = [
+  {
+    id: 'cdp-fisher-house-2024',
+    type: 'charity_directory',
+    title: 'Add "Fisher House Foundation" to VMF Charity Directory',
+    author: 'veteran.eth',
+    status: 'active',
+    timeLeft: '5 days left',
+    yesPercentage: 72,
+    noPercentage: 18,
+    abstainPercentage: 10,
+    description:
+      'Proposal to add Fisher House Foundation to our approved charity directory. They provide comfort homes for military families.',
+    createdAt: new Date('2024-01-08'),
+    votingEndsAt: new Date('2024-01-22'),
+    charityData: {
+      name: 'Fisher House Foundation',
+      description:
+        'Provides comfort homes for military families during medical treatment',
+      website: 'https://www.fisherhouse.org',
+      ein: '11-3158401',
+      category: 'military_families',
+      contactEmail: 'info@fisherhouse.org',
+      contactPhone: '(888) 294-8560',
+      address: {
+        street: '12300 Twinbrook Parkway',
+        city: 'Rockville',
+        state: 'MD',
+        zipCode: '20852',
+      },
+      missionStatement:
+        'Providing comfort homes for military families during medical treatment',
+      veteranFocus:
+        'Supporting families of wounded, ill, and injured service members',
+      impactDescription:
+        'Over 8 million days of lodging provided to military families',
+      requestedDocuments: [],
+    },
+    verificationDocuments: [],
+    isAutoGenerated: false,
+    votingType: 'approval',
+  },
+];
+
+const platformFeatureProposals: PlatformFeatureProposal[] = [
+  {
+    id: 'pfp-mobile-app-2024',
+    type: 'platform_feature',
+    title: 'VMF Mobile Application Development',
+    author: 'developer.eth',
+    status: 'active',
+    timeLeft: '8 days left',
+    yesPercentage: 68,
+    noPercentage: 22,
+    abstainPercentage: 10,
+    description:
+      'Proposal to develop a native mobile application for iOS and Android to improve accessibility and user engagement.',
+    createdAt: new Date('2024-01-05'),
+    votingEndsAt: new Date('2024-01-19'),
+    featureSpecification: {
+      title: 'VMF Mobile Application',
+      description:
+        'Native mobile app for iOS and Android with full voting and community features',
+      userStory:
+        'As a VMF token holder, I want to access the platform from my mobile device so that I can participate in governance on the go',
+      acceptanceCriteria: [
+        'Native iOS and Android applications',
+        'Full voting functionality',
+        'Push notifications for new proposals',
+        'Biometric authentication support',
+        'Offline proposal viewing',
+      ],
+      technicalRequirements:
+        'React Native framework, Web3 wallet integration, push notification service',
+      priority: 'high',
+      estimatedEffort: '3-4 months',
+      targetUsers: ['Mobile users', 'Active voters', 'Community members'],
+      businessValue: 'Increase participation rates and user engagement',
+    },
+    implementationComplexity: 'medium',
+    estimatedDevelopmentTime: '3-4 months',
+    isAutoGenerated: false,
+    votingType: 'approval',
+  },
+];
+
+// Legacy proposals (converted to new type system)
+const legacyProposals: LegacyProposal[] = [
+  {
+    id: 'legacy-quarterly-2024',
+    type: 'legacy',
+    title: 'Quarterly Charity Funding Allocation',
+    author: 'patriot.eth',
+    status: 'passed',
+    timeLeft: 'Completed',
+    yesPercentage: 78,
+    noPercentage: 15,
+    abstainPercentage: 7,
+    description:
+      'Approved quarterly funding allocation of $200,000 to be distributed among top-voted charities.',
+    createdAt: new Date('2023-12-01'),
+    votingEndsAt: new Date('2023-12-15'),
+    isAutoGenerated: false,
+    votingType: 'approval',
+  },
+  {
+    id: 'legacy-governance-2023',
+    type: 'legacy',
+    title: 'Platform Governance Structure Update',
+    author: 'founder.eth',
+    status: 'passed',
+    timeLeft: 'Completed',
+    yesPercentage: 85,
+    noPercentage: 10,
+    abstainPercentage: 5,
+    description:
+      'Implemented new governance structure with improved proposal types and voting mechanisms.',
+    createdAt: new Date('2023-11-01'),
+    votingEndsAt: new Date('2023-11-15'),
+    isAutoGenerated: false,
+    votingType: 'approval',
+  },
+];
+
+// Combined proposals array
+export const mockProposals: Proposal[] = [
+  ...holidayCharityProposals,
+  ...charityDirectoryProposals,
+  ...platformFeatureProposals,
+  ...legacyProposals,
 ];
 
 export const mockHolidays: Holiday[] = [

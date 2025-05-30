@@ -45,7 +45,7 @@ export default function ProposalDetailPage() {
 
   if (!proposal) {
     return (
-      <main className="min-h-screen bg-backgroundDark">
+      <main className="min-h-screen landing-page-flag">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Card className="text-center py-12">
@@ -127,7 +127,7 @@ export default function ProposalDetailPage() {
   );
 
   return (
-    <main className="min-h-screen bg-backgroundDark">
+    <main className="min-h-screen landing-page-flag">
       <Header />
       <ToastContainer />
 

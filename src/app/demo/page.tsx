@@ -11,6 +11,7 @@ import {
   VotingPower,
   ProposalCard,
 } from '@/components';
+import { TypeSpecificProposalCard } from '@/components/proposals';
 import { mockProposals } from '@/data/mockData';
 
 export default function DemoPage() {
@@ -18,7 +19,7 @@ export default function DemoPage() {
   const [inputValue, setInputValue] = useState('');
 
   return (
-    <main className="min-h-screen bg-backgroundDark">
+    <main className="min-h-screen landing-page-flag">
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -209,8 +210,8 @@ export default function DemoPage() {
             Proposal Cards
           </h2>
           <div className="grid lg:grid-cols-2 gap-6">
-            {mockProposals.map(proposal => (
-              <ProposalCard key={proposal.id} proposal={proposal} />
+            {mockProposals.slice(0, 6).map(proposal => (
+              <TypeSpecificProposalCard key={proposal.id} proposal={proposal} />
             ))}
           </div>
         </section>

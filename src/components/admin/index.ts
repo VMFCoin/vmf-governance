@@ -1,0 +1,1 @@
+export { HolidayProposalManager } from './HolidayProposalManager';

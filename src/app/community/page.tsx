@@ -133,7 +133,7 @@ export default function CommunityPage() {
   const stats = getCategoryStats();
 
   return (
-    <main className="min-h-screen bg-backgroundDark">
+    <main className="min-h-screen landing-page-flag">
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
