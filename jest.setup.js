@@ -46,32 +46,12 @@ jest.mock('framer-motion', () => ({
         h1: ({ children, ...props }) => <h1 {...props}>{children}</h1>,
         h2: ({ children, ...props }) => <h2 {...props}>{children}</h2>,
         h3: ({ children, ...props }) => <h3 {...props}>{children}</h3>,
-        circle: ({ children, ...props }) => <circle {...props}>{children}</circle>,
-        svg: ({ children, ...props }) => <svg {...props}>{children}</svg>,
     },
     AnimatePresence: ({ children }) => children,
     useAnimation: () => ({
         start: jest.fn(),
         stop: jest.fn(),
         set: jest.fn(),
-    }),
-    useMotionValue: (initialValue) => ({
-        get: () => initialValue,
-        set: jest.fn(),
-        on: jest.fn(),
-        destroy: jest.fn(),
-    }),
-    useSpring: (initialValue) => ({
-        get: () => initialValue,
-        set: jest.fn(),
-        on: jest.fn(),
-        destroy: jest.fn(),
-    }),
-    useTransform: (value, transformer) => ({
-        get: () => typeof transformer === 'function' ? transformer(value) : value,
-        set: jest.fn(),
-        on: jest.fn(),
-        destroy: jest.fn(),
     }),
 }))
 

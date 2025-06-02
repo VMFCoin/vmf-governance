@@ -10,11 +10,6 @@ import {
   modalVariants,
   fadeInVariants,
   buttonVariants,
-  votingButtonVariants,
-  voteCountVariants,
-  loadingSpinnerVariants,
-  celebrationVariants,
-  getAnimationVariants,
 } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 
@@ -130,39 +125,24 @@ export const VoteModal: React.FC<VoteModalProps> = ({
                     <motion.div
                       key="success"
                       className="text-center py-8"
-                      variants={getAnimationVariants(celebrationVariants)}
+                      variants={fadeInVariants}
                       initial="initial"
-                      animate="animate"
+                      animate="enter"
                       exit="exit"
                     >
                       <div className="relative">
                         <motion.div
                           initial={{ scale: 0, rotate: -180 }}
-                          animate={{
-                            scale: 1,
-                            rotate: 0,
-                            filter: [
-                              'drop-shadow(0 0 0px rgba(34, 197, 94, 0))',
-                              'drop-shadow(0 0 20px rgba(34, 197, 94, 0.8))',
-                              'drop-shadow(0 0 0px rgba(34, 197, 94, 0))',
-                            ],
-                          }}
+                          animate={{ scale: 1, rotate: 0 }}
                           transition={{
                             type: 'spring',
                             stiffness: 200,
                             damping: 15,
                             delay: 0.2,
-                            filter: {
-                              duration: 2,
-                              repeat: Infinity,
-                              ease: 'easeInOut',
-                            },
                           }}
                         >
                           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                         </motion.div>
-
-                        {/* Enhanced pulse rings */}
                         <motion.div
                           className="absolute inset-0 flex items-center justify-center"
                           initial={{ scale: 0, opacity: 0 }}
@@ -175,45 +155,6 @@ export const VoteModal: React.FC<VoteModalProps> = ({
                         >
                           <div className="w-20 h-20 border-4 border-green-500/20 rounded-full" />
                         </motion.div>
-
-                        <motion.div
-                          className="absolute inset-0 flex items-center justify-center"
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{ scale: 2, opacity: [0, 0.3, 0] }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: 'easeOut',
-                            delay: 0.5,
-                          }}
-                        >
-                          <div className="w-24 h-24 border-2 border-green-500/10 rounded-full" />
-                        </motion.div>
-
-                        {/* Sparkle effects */}
-                        {[...Array(6)].map((_, i) => (
-                          <motion.div
-                            key={i}
-                            className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-                            style={{
-                              top: '50%',
-                              left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                            }}
-                            animate={{
-                              x: [0, Math.cos((i * 60 * Math.PI) / 180) * 40],
-                              y: [0, Math.sin((i * 60 * Math.PI) / 180) * 40],
-                              opacity: [0, 1, 0],
-                              scale: [0, 1, 0],
-                            }}
-                            transition={{
-                              duration: 1.5,
-                              repeat: Infinity,
-                              delay: 0.5 + i * 0.1,
-                              ease: 'easeOut',
-                            }}
-                          />
-                        ))}
                       </div>
 
                       <motion.h3
@@ -295,11 +236,7 @@ export const VoteModal: React.FC<VoteModalProps> = ({
                           stiffness: 200,
                         }}
                       >
-                        <motion.div
-                          className="inline-flex items-center gap-3 bg-backgroundDark rounded-lg px-6 py-4"
-                          variants={getAnimationVariants(voteCountVariants)}
-                          animate="animate"
-                        >
+                        <div className="inline-flex items-center gap-3 bg-backgroundDark rounded-lg px-6 py-4">
                           <motion.span
                             className="text-2xl"
                             animate={{
@@ -318,29 +255,16 @@ export const VoteModal: React.FC<VoteModalProps> = ({
                             <p className="text-sm text-textSecondary">
                               Your Vote:
                             </p>
-                            <motion.p
+                            <p
                               className={cn(
                                 'text-lg font-bold capitalize',
                                 getVoteColor(selectedVote || '')
                               )}
-                              animate={{
-                                scale: [1, 1.1, 1],
-                                textShadow: [
-                                  '0 0 0px rgba(255, 255, 255, 0)',
-                                  '0 0 10px rgba(255, 255, 255, 0.5)',
-                                  '0 0 0px rgba(255, 255, 255, 0)',
-                                ],
-                              }}
-                              transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                              }}
                             >
                               {selectedVote}
-                            </motion.p>
+                            </p>
                           </div>
-                        </motion.div>
+                        </div>
                       </motion.div>
 
                       <motion.div
@@ -364,10 +288,9 @@ export const VoteModal: React.FC<VoteModalProps> = ({
                       >
                         <motion.div
                           className="flex-1"
-                          variants={getAnimationVariants(votingButtonVariants)}
-                          animate={isVoting ? 'loading' : 'initial'}
-                          whileHover={!isVoting ? 'hover' : undefined}
-                          whileTap={!isVoting ? 'tap' : undefined}
+                          variants={buttonVariants}
+                          whileHover="hover"
+                          whileTap="tap"
                         >
                           <Button
                             onClick={handleVote}
@@ -381,42 +304,22 @@ export const VoteModal: React.FC<VoteModalProps> = ({
                                 transition={{ duration: 1, repeat: Infinity }}
                               />
                             )}
-                            <span className="relative flex items-center justify-center">
+                            <span className="relative">
                               {isVoting ? (
                                 <>
                                   <motion.div
                                     className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
-                                    variants={getAnimationVariants(
-                                      loadingSpinnerVariants
-                                    )}
-                                    animate="animate"
-                                  />
-                                  <motion.span
-                                    animate={{
-                                      opacity: [0.7, 1, 0.7],
-                                    }}
+                                    animate={{ rotate: 360 }}
                                     transition={{
-                                      duration: 1.5,
+                                      duration: 1,
                                       repeat: Infinity,
-                                      ease: 'easeInOut',
+                                      ease: 'linear',
                                     }}
-                                  >
-                                    Submitting...
-                                  </motion.span>
+                                  />
+                                  Submitting...
                                 </>
                               ) : (
-                                <motion.span
-                                  animate={{
-                                    scale: [1, 1.02, 1],
-                                  }}
-                                  transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    ease: 'easeInOut',
-                                  }}
-                                >
-                                  Confirm Vote
-                                </motion.span>
+                                'Confirm Vote'
                               )}
                             </span>
                           </Button>
