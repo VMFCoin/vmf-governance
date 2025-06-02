@@ -3,7 +3,7 @@
 import { useHolidayStore } from '@/stores/useHolidayStore';
 import { useProposalStore } from '@/stores/useProposalStore';
 import { useCharityStore } from '@/stores/useCharityStore';
-import { HolidayCharityProposal } from '@/types';
+import { HolidayCharityProposal, MilitaryHoliday } from '@/types';
 
 export class HolidayProposalService {
   private static instance: HolidayProposalService;
@@ -220,7 +220,7 @@ export class HolidayProposalService {
    * Get upcoming holidays that need proposals
    */
   public getUpcomingHolidaysNeedingProposals(): Array<{
-    holiday: any;
+    holiday: MilitaryHoliday;
     daysUntil: number;
     needsProposal: boolean;
   }> {
