@@ -151,7 +151,8 @@ export const useHolidayStore = create<HolidayState>()(
 
       // Computed getters
       getHolidayById: id => {
-        return get().holidays.find(h => h.id === id);
+        if (!id) return undefined;
+        return get().holidays.find(h => h?.id === id);
       },
 
       getUpcomingHolidays: (daysAhead = 90) => {

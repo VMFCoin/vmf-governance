@@ -17,6 +17,11 @@ import {
   Dropdown,
   useToast,
 } from '@/components';
+import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
+import { FormField } from '@/components/ui/FormField';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
+import { Step as EnhancedStep } from '@/components/ui/StepIndicator';
+import { useMobile } from '@/hooks/useMobile';
 import {
   ProposalFormData,
   FormErrors,
@@ -24,30 +29,36 @@ import {
   CharitySubmission,
   FeatureSpec,
 } from '@/types';
+import {
+  proposalTypeContainerVariants,
+  proposalTypeCardVariants,
+  getAnimationVariants,
+  formErrorVariants,
+} from '@/lib/animations';
 
-const CHARITY_STEPS: Step[] = [
-  { id: 0, title: 'Proposal Type', description: 'Select proposal type' },
-  { id: 1, title: 'Basic Info', description: 'Title & Category' },
-  { id: 2, title: 'Charity Details', description: 'Charity Information' },
-  { id: 3, title: 'Logo Upload', description: 'Charity Logo' },
-  { id: 4, title: 'Review', description: 'Final Preview' },
+const CHARITY_STEPS: EnhancedStep[] = [
+  { id: '0', title: 'Proposal Type', description: 'Select proposal type' },
+  { id: '1', title: 'Basic Info', description: 'Title & Category' },
+  { id: '2', title: 'Charity Details', description: 'Charity Information' },
+  { id: '3', title: 'Logo Upload', description: 'Charity Logo' },
+  { id: '4', title: 'Review', description: 'Final Preview' },
 ];
 
-const PLATFORM_FEATURE_STEPS: Step[] = [
-  { id: 0, title: 'Proposal Type', description: 'Select proposal type' },
-  { id: 1, title: 'Basic Info', description: 'Title & Category' },
+const PLATFORM_FEATURE_STEPS: EnhancedStep[] = [
+  { id: '0', title: 'Proposal Type', description: 'Select proposal type' },
+  { id: '1', title: 'Basic Info', description: 'Title & Category' },
   {
-    id: 2,
+    id: '2',
     title: 'Feature Specification',
     description: 'Feature Specification',
   },
   {
-    id: 3,
+    id: '3',
     title: 'Priority & Complexity',
     description: 'Implementation Details',
   },
-  { id: 4, title: 'Feature Logo', description: 'Feature Icon/Logo' },
-  { id: 5, title: 'Review', description: 'Final Preview' },
+  { id: '4', title: 'Feature Logo', description: 'Feature Icon/Logo' },
+  { id: '5', title: 'Review', description: 'Final Preview' },
 ];
 
 const CATEGORIES = [
@@ -138,9 +149,21 @@ const IMPLEMENTATION_COMPLEXITY = [
 export default function SubmitPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { isMobile, isSmallMobile } = useMobile();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previousType, setPreviousType] = useState<string>('charity_directory');
+
+  // Mobile touch navigation state
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Enhanced auto-save state
+  const [saveStatus, setSaveStatus] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
 
   const [formData, setFormData] = useState<ProposalFormData>({
     type: 'charity_directory', // Default to charity directory instead of legacy
@@ -188,6 +211,59 @@ export default function SubmitPage() {
 
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // Auto-save functionality
+  const saveToLocalStorage = useCallback(() => {
+    if (!autoSaveEnabled) return;
+
+    setSaveStatus('saving');
+    try {
+      localStorage.setItem('vmf-proposal-draft', JSON.stringify(formData));
+      localStorage.setItem('vmf-proposal-step', currentStep.toString());
+      setSaveStatus('saved');
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      setSaveStatus('error');
+    }
+  }, [formData, currentStep, autoSaveEnabled]);
+
+  // Mobile touch handlers for swipe navigation
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isMobile || !touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentStep < getCurrentSteps().length - 1) {
+      nextStep();
+    }
+    if (isRightSwipe && currentStep > 0) {
+      prevStep();
+    }
+  };
+
+  // Mobile keyboard optimization
+  const handleMobileInputFocus = () => {
+    if (isMobile) {
+      // Scroll to top to ensure form is visible when keyboard opens
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 300);
+    }
+  };
+
   // Load saved form data from localStorage
   useEffect(() => {
     const savedData = localStorage.getItem('vmf-proposal-draft');
@@ -195,25 +271,36 @@ export default function SubmitPage() {
       try {
         const parsed = JSON.parse(savedData);
         setFormData(prev => ({ ...prev, ...parsed }));
+        if (parsed.lastSaved) {
+          setLastSaved(new Date(parsed.lastSaved));
+        }
       } catch (error) {
         console.error('Error loading saved form data:', error);
       }
     }
   }, []);
 
-  // Save form data to localStorage
+  // Enhanced auto-save trigger
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      localStorage.setItem('vmf-proposal-draft', JSON.stringify(formData));
+      saveToLocalStorage();
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [formData]);
+  }, [formData, saveToLocalStorage]);
 
-  // ✅ Create stable updateFormData function
+  // Manual save function
+  const handleManualSave = useCallback(() => {
+    saveToLocalStorage();
+  }, [formData, saveToLocalStorage]);
+
+  // Enhanced form data update with auto-save
   const updateFormData = useCallback(
     (field: keyof ProposalFormData, value: any) => {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData(prev => {
+        const newData = { ...prev, [field]: value };
+        return newData;
+      });
       // Clear error when user starts typing
       if (errors[field]) {
         setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -285,6 +372,88 @@ export default function SubmitPage() {
     // Default to charity steps since we removed legacy proposals
     return CHARITY_STEPS;
   };
+
+  // Calculate completion percentage for current step
+  const calculateStepCompletion = useCallback(
+    (step: number): number => {
+      switch (step) {
+        case 0: // Proposal Type
+          return formData.type ? 100 : 0;
+
+        case 1: // Basic Info
+          const basicFields = [formData.title, formData.category];
+          const basicCompleted = basicFields.filter(Boolean).length;
+          return Math.round((basicCompleted / basicFields.length) * 100);
+
+        case 2: // Details
+          if (formData.type === 'charity_directory') {
+            const charityFields = [
+              formData.charityData?.name,
+              formData.charityData?.website,
+              formData.charityData?.missionStatement,
+              formData.charityData?.veteranFocus,
+              formData.charityData?.impactDescription,
+            ];
+            const charityCompleted = charityFields.filter(
+              field => field && field.length > 0
+            ).length;
+            return Math.round((charityCompleted / charityFields.length) * 100);
+          } else if (formData.type === 'platform_feature') {
+            const featureFields = [
+              formData.featureSpecification?.title,
+              formData.featureSpecification?.description,
+              formData.featureSpecification?.userStory,
+              formData.featureSpecification?.businessValue,
+            ];
+            const featureCompleted = featureFields.filter(
+              field => field && field.length > 0
+            ).length;
+            return Math.round((featureCompleted / featureFields.length) * 100);
+          }
+          return 0;
+
+        case 3: // Priority/Attachments
+          if (formData.type === 'platform_feature') {
+            const priorityFields = [
+              formData.featureSpecification?.priority,
+              formData.featureSpecification?.estimatedEffort,
+              formData.featureSpecification?.technicalRequirements,
+            ];
+            const priorityCompleted = priorityFields.filter(
+              field => field && field.length > 0
+            ).length;
+            return Math.round(
+              (priorityCompleted / priorityFields.length) * 100
+            );
+          }
+          return formData.attachments.length > 0 ? 100 : 50; // Attachments are optional
+
+        case 4: // Attachments/Review
+          return formData.attachments.length > 0 ? 100 : 50; // Attachments are optional
+
+        case 5: // Review
+          return 100; // Always complete when viewing
+
+        default:
+          return 0;
+      }
+    },
+    [formData]
+  );
+
+  // Enhanced step data with completion tracking
+  const getEnhancedSteps = useCallback((): EnhancedStep[] => {
+    const baseSteps = getCurrentSteps();
+    return baseSteps.map((step, index) => ({
+      ...step,
+      isCompleted: currentStep > index,
+      isActive: currentStep === index,
+      completionPercentage:
+        currentStep === index ? calculateStepCompletion(index) : undefined,
+      saveStatus: currentStep === index ? saveStatus : 'idle',
+      lastSaved: currentStep === index && lastSaved ? lastSaved : undefined,
+    }));
+  }, [currentStep, saveStatus, lastSaved, calculateStepCompletion]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: FormErrors = {};
@@ -404,11 +573,23 @@ export default function SubmitPage() {
     setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
+  // Enhanced step navigation with validation
+  const handleStepNavigation = useCallback(
+    (targetStep: number) => {
+      if (targetStep < currentStep || targetStep === currentStep + 1) {
+        if (validateStep(currentStep)) {
+          setCurrentStep(targetStep);
+        }
+      }
+    },
+    [currentStep, validateStep]
+  );
+
   const handleSubmit = async () => {
     const steps = getCurrentSteps();
-    const finalStepId = steps[steps.length - 1].id;
+    const finalStepIndex = steps.length - 1;
 
-    if (!validateStep(finalStepId)) return;
+    if (!validateStep(finalStepIndex)) return;
 
     setIsSubmitting(true);
 
@@ -450,46 +631,69 @@ export default function SubmitPage() {
                 community
               </p>
             </div>
-            <div className="grid gap-4">
+            <motion.div
+              className={`grid gap-4 ${isMobile ? 'gap-3' : 'gap-4'}`}
+              variants={getAnimationVariants(proposalTypeContainerVariants)}
+              initial="initial"
+              animate="enter"
+              exit="exit"
+            >
               {PROPOSAL_TYPES.map((type, index) => {
                 const isSelected = formData.type === type.value;
 
                 return (
                   <motion.div
                     key={type.value}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.4,
-                      delay: index * 0.1,
-                      ease: [0.4, 0.0, 0.2, 1],
-                    }}
-                    className={`group relative p-6 rounded-lg border-2 cursor-pointer transition-all duration-300 ease-out overflow-hidden ${
+                    variants={getAnimationVariants(proposalTypeCardVariants)}
+                    animate={isSelected ? 'selected' : 'unselected'}
+                    whileHover="hover"
+                    whileTap="tap"
+                    className={`group relative cursor-pointer transition-all duration-300 ease-out overflow-hidden ${
+                      isMobile
+                        ? 'p-4 min-h-[80px] rounded-lg border-2'
+                        : 'p-6 rounded-lg border-2'
+                    } ${
                       isSelected
-                        ? 'border-patriotRed bg-patriotRed/5 shadow-lg shadow-patriotRed/10'
-                        : 'border-patriotBlue/30 bg-backgroundLight/30 hover:border-patriotBlue/50 hover:bg-backgroundLight/50 hover:shadow-md'
+                        ? 'border-patriotRed bg-patriotRed/5'
+                        : 'border-patriotBlue/30 bg-backgroundLight/30 hover:border-patriotBlue/50 hover:bg-backgroundLight/50'
                     }`}
                     onClick={() => {
                       updateFormData('type', type.value);
                       setPreviousType(type.value);
                     }}
-                    whileHover={{
-                      scale: 1.01,
-                      transition: { duration: 0.2 },
+                    onTouchStart={e => {
+                      // Add touch feedback
+                      e.currentTarget.style.transform = 'scale(0.98)';
                     }}
-                    whileTap={{ scale: 0.98 }}
+                    onTouchEnd={e => {
+                      // Reset touch feedback
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    style={{
+                      boxShadow: isSelected
+                        ? '0 0 30px rgba(178, 34, 52, 0.4)'
+                        : '0 0 0px rgba(178, 34, 52, 0)',
+                      // Ensure minimum touch target size on mobile
+                      minHeight: isMobile ? '80px' : 'auto',
+                      touchAction: 'manipulation', // Prevent double-tap zoom
+                    }}
                   >
-                    {/* Clean selection indicator */}
+                    {/* Enhanced selection indicator */}
                     <div className="flex items-start">
-                      <div className="relative mr-4 mt-1 flex-shrink-0">
+                      <div
+                        className={`relative flex-shrink-0 ${isMobile ? 'mr-3 mt-0.5' : 'mr-4 mt-1'}`}
+                      >
                         <motion.div
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} rounded-full border-2 flex items-center justify-center ${
                             isSelected
                               ? 'border-patriotRed bg-patriotRed'
                               : 'border-patriotBlue/50'
                           }`}
                           animate={{
                             scale: isSelected ? 1.1 : 1,
+                            borderColor: isSelected
+                              ? '#B22234'
+                              : 'rgba(27, 41, 81, 0.5)',
                           }}
                           transition={{
                             type: 'spring',
@@ -497,12 +701,15 @@ export default function SubmitPage() {
                             damping: 20,
                           }}
                         >
-                          {/* Perfectly centered white dot */}
+                          {/* Enhanced center dot with glow effect */}
                           <motion.div
-                            className="w-2 h-2 bg-patriotWhite rounded-full"
+                            className={`${isMobile ? 'w-2.5 h-2.5' : 'w-2 h-2'} bg-patriotWhite rounded-full`}
                             initial={{ scale: 0 }}
                             animate={{
                               scale: isSelected ? 1 : 0,
+                              boxShadow: isSelected
+                                ? '0 0 8px rgba(255, 255, 255, 0.8)'
+                                : '0 0 0px rgba(255, 255, 255, 0)',
                             }}
                             transition={{
                               duration: 0.2,
@@ -513,74 +720,100 @@ export default function SubmitPage() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h4
-                          className={`text-lg font-semibold mb-2 transition-colors duration-300 ${
+                        <motion.h4
+                          className={`font-semibold mb-2 transition-colors duration-300 ${
+                            isMobile ? 'text-base' : 'text-lg'
+                          } ${
                             isSelected
                               ? 'text-patriotWhite'
                               : 'text-patriotWhite/90'
                           }`}
+                          animate={{
+                            color: isSelected
+                              ? '#F8F9FA'
+                              : 'rgba(248, 249, 250, 0.9)',
+                          }}
                         >
                           {type.label}
-                        </h4>
-                        <p
-                          className={`text-sm transition-colors duration-300 ${
+                        </motion.h4>
+                        <motion.p
+                          className={`transition-colors duration-300 ${
+                            isMobile ? 'text-xs leading-relaxed' : 'text-sm'
+                          } ${
                             isSelected
                               ? 'text-textSecondary'
                               : 'text-textSecondary/80'
                           }`}
+                          animate={{
+                            color: isSelected
+                              ? '#D1D5DB'
+                              : 'rgba(209, 213, 219, 0.8)',
+                          }}
                         >
                           {type.description}
-                        </p>
+                        </motion.p>
                       </div>
 
-                      {/* Clean checkmark for selected state */}
+                      {/* Enhanced checkmark with celebration effect */}
                       <AnimatePresence>
                         {isSelected && (
                           <motion.div
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="ml-4 flex-shrink-0"
+                            initial={{ opacity: 0, scale: 0, rotate: -180 }}
+                            animate={{
+                              opacity: 1,
+                              scale: 1,
+                              rotate: 0,
+                              boxShadow: '0 0 20px rgba(178, 34, 52, 0.5)',
+                            }}
+                            exit={{ opacity: 0, scale: 0, rotate: 180 }}
+                            transition={{
+                              duration: 0.4,
+                              type: 'spring',
+                              stiffness: 300,
+                              damping: 20,
+                            }}
+                            className={`flex-shrink-0 ${isMobile ? 'ml-3' : 'ml-4'}`}
                           >
-                            <div className="w-6 h-6 rounded-full bg-patriotRed flex items-center justify-center">
-                              <svg
-                                className="w-3 h-3 text-patriotWhite"
+                            <div
+                              className={`${isMobile ? 'w-7 h-7' : 'w-6 h-6'} rounded-full bg-patriotRed flex items-center justify-center`}
+                            >
+                              <motion.svg
+                                className={`${isMobile ? 'w-4 h-4' : 'w-3 h-3'} text-patriotWhite`}
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
+                                initial={{ pathLength: 0 }}
+                                animate={{ pathLength: 1 }}
+                                transition={{ duration: 0.3, delay: 0.1 }}
                               >
-                                <path
+                                <motion.path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeWidth={2.5}
                                   d="M5 13l4 4L19 7"
                                 />
-                              </svg>
+                              </motion.svg>
                             </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
-
-                    {/* Subtle hover shimmer effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-patriotWhite/3 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                    </div>
                   </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
           </div>
         );
 
       case 1:
         return (
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-patriotWhite mb-2">
-                Proposal Title *
-              </label>
+            <FormField
+              label="Proposal Title"
+              required
+              error={errors.title}
+              helpText="Choose a clear, descriptive title that summarizes your proposal. This will be the main identifier for community members when voting."
+            >
               <Input
                 value={formData.title}
                 onChange={e => updateFormData('title', e.target.value)}
@@ -591,24 +824,21 @@ export default function SubmitPage() {
               <p className="text-xs text-textSecondary mt-1">
                 {formData.title.length}/100 characters
               </p>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-patriotWhite mb-2">
-                Category *
-              </label>
+            <FormField
+              label="Category"
+              required
+              error={errors.category}
+              helpText="Select the category that best describes your proposal. This helps community members find and filter proposals by topic."
+            >
               <Dropdown
                 options={CATEGORIES}
                 value={formData.category}
                 onChange={value => updateFormData('category', value)}
                 placeholder="Select a category"
               />
-              {errors.category && (
-                <p className="text-patriotRed text-sm mt-1">
-                  {errors.category}
-                </p>
-              )}
-            </div>
+            </FormField>
           </div>
         );
 
@@ -678,9 +908,16 @@ export default function SubmitPage() {
                   className="w-full h-24 bg-backgroundLight border border-patriotBlue/30 rounded-lg p-4 text-textBase placeholder-textSecondary resize-none focus:outline-none focus:ring-2 focus:ring-patriotRed focus:border-transparent"
                 />
                 {errors.charityData?.missionStatement && (
-                  <p className="text-patriotRed text-sm mt-1">
+                  <motion.p
+                    className="text-patriotRed text-sm mt-1"
+                    variants={getAnimationVariants(formErrorVariants)}
+                    initial="initial"
+                    animate="enter"
+                    exit="exit"
+                    key={`mission-error-${errors.charityData.missionStatement}`}
+                  >
                     {errors.charityData.missionStatement}
-                  </p>
+                  </motion.p>
                 )}
               </div>
 
@@ -768,9 +1005,16 @@ export default function SubmitPage() {
                   className="w-full h-32 bg-backgroundLight border border-patriotBlue/30 rounded-lg p-4 text-textBase placeholder-textSecondary resize-none focus:outline-none focus:ring-2 focus:ring-patriotRed focus:border-transparent"
                 />
                 {errors.featureSpecification?.description && (
-                  <p className="text-patriotRed text-sm mt-1">
+                  <motion.p
+                    className="text-patriotRed text-sm mt-1"
+                    variants={getAnimationVariants(formErrorVariants)}
+                    initial="initial"
+                    animate="enter"
+                    exit="exit"
+                    key={`description-error-${errors.featureSpecification.description}`}
+                  >
                     {errors.featureSpecification.description}
-                  </p>
+                  </motion.p>
                 )}
               </div>
 
@@ -873,10 +1117,12 @@ export default function SubmitPage() {
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-patriotWhite mb-4">
-                  Charity Logo *
-                </label>
+              <FormField
+                label="Charity Logo"
+                required
+                error={errors.attachments}
+                helpText="Upload the charity's official logo in high quality. This will be displayed in the VMF directory and voting interface. Accepted formats: JPEG, PNG, GIF, WebP (max 5MB)."
+              >
                 <FileUpload
                   onFilesChange={handleFilesChange}
                   maxFiles={1}
@@ -889,11 +1135,7 @@ export default function SubmitPage() {
                   ]}
                   error={errors.attachments}
                 />
-                <p className="text-textSecondary text-sm mt-2">
-                  Upload the charity's official logo. This will be displayed in
-                  the VMF directory and voting interface.
-                </p>
-              </div>
+              </FormField>
 
               <div className="bg-backgroundLight/50 rounded-lg p-4 border border-patriotBlue/30">
                 <h4 className="font-medium text-patriotWhite mb-2">
@@ -1154,7 +1396,6 @@ export default function SubmitPage() {
                     'image/png',
                     'image/gif',
                     'image/webp',
-                    'image/svg+xml',
                   ]}
                   error={errors.attachments}
                 />
@@ -1349,17 +1590,35 @@ export default function SubmitPage() {
 
         {/* Step Indicator */}
         <div className="mb-12">
-          <StepIndicator steps={getCurrentSteps()} currentStep={currentStep} />
+          <div className="flex items-center justify-between mb-4">
+            <StepIndicator
+              steps={getEnhancedSteps()}
+              currentStep={currentStep}
+              onStepClick={handleStepNavigation}
+            />
+            <SaveStatusIndicator
+              status={saveStatus}
+              lastSaved={lastSaved || undefined}
+              showText={true}
+            />
+          </div>
         </div>
 
         {/* Form Content */}
-        <Card className="p-8 mb-8">
+        <Card
+          className={`mb-8 ${isMobile ? 'p-4' : 'p-8'}`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {currentStep !== 0 && (
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-patriotWhite mb-2">
+            <div className={`mb-6 ${isMobile ? 'mb-4' : 'mb-6'}`}>
+              <h2
+                className={`font-semibold text-patriotWhite mb-2 ${isMobile ? 'text-xl' : 'text-2xl'}`}
+              >
                 {getCurrentSteps()[currentStep].title}
               </h2>
-              <p className="text-textSecondary">
+              <p className={`text-textSecondary ${isMobile ? 'text-sm' : ''}`}>
                 {getCurrentSteps()[currentStep].description}
               </p>
             </div>
@@ -1375,6 +1634,7 @@ export default function SubmitPage() {
                 duration: 0.25,
                 ease: [0.4, 0.0, 0.2, 1],
               }}
+              onFocus={isMobile ? handleMobileInputFocus : undefined}
             >
               {renderStepContent()}
             </motion.div>
@@ -1382,58 +1642,132 @@ export default function SubmitPage() {
         </Card>
 
         {/* Navigation Buttons */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="secondary"
-            onClick={prevStep}
-            disabled={currentStep === 0}
-            className="flex items-center"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
+        <div
+          className={`flex items-center ${isMobile ? 'flex-col space-y-3' : 'justify-between'}`}
+        >
+          {isMobile ? (
+            <>
+              {/* Mobile: Stack buttons vertically */}
+              <div className="w-full flex justify-between items-center">
+                <Button
+                  variant="secondary"
+                  onClick={prevStep}
+                  disabled={currentStep === 0}
+                  className={`flex items-center ${isMobile ? 'min-h-[48px] px-6 touch-manipulation' : ''}`}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Previous
+                </Button>
 
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                localStorage.setItem(
-                  'vmf-proposal-draft',
-                  JSON.stringify(formData)
-                );
-                showSuccess('Draft saved successfully!');
-              }}
-              className="flex items-center"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save Draft
-            </Button>
+                {currentStep < getCurrentSteps().length - 1 ? (
+                  <Button
+                    onClick={nextStep}
+                    className={`flex items-center ${isMobile ? 'min-h-[48px] px-6 touch-manipulation' : ''}`}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    className={`flex items-center ${isMobile ? 'min-h-[48px] px-6 touch-manipulation' : ''}`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-patriotWhite border-t-transparent rounded-full animate-spin mr-2" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Submit
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
 
-            {currentStep < getCurrentSteps().length - 1 ? (
-              <Button onClick={nextStep} className="flex items-center">
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            ) : (
+              {/* Mobile: Save button full width */}
               <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex items-center"
+                variant="ghost"
+                onClick={handleManualSave}
+                disabled={saveStatus === 'saving'}
+                className={`w-full flex items-center justify-center ${isMobile ? 'min-h-[48px] touch-manipulation' : ''}`}
               >
-                {isSubmitting ? (
+                {saveStatus === 'saving' ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-patriotWhite border-t-transparent rounded-full animate-spin mr-2" />
-                    Submitting...
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Saving...
                   </>
                 ) : (
                   <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Submit Proposal
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Draft
                   </>
                 )}
               </Button>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Desktop: Original layout */}
+              <Button
+                variant="secondary"
+                onClick={prevStep}
+                disabled={currentStep === 0}
+                className="flex items-center"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  onClick={handleManualSave}
+                  disabled={saveStatus === 'saving'}
+                  className="flex items-center"
+                >
+                  {saveStatus === 'saving' ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Draft
+                    </>
+                  )}
+                </Button>
+
+                {currentStep < getCurrentSteps().length - 1 ? (
+                  <Button onClick={nextStep} className="flex items-center">
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    className="flex items-center"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-patriotWhite border-t-transparent rounded-full animate-spin mr-2" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Submit Proposal
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

@@ -11,6 +11,8 @@ interface VoteChartProps {
   abstainPercentage: number;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  mobileOptimized?: boolean;
+  variant?: 'circle' | 'bar' | 'auto';
 }
 
 export const VoteChart: React.FC<VoteChartProps> = ({
@@ -19,14 +21,48 @@ export const VoteChart: React.FC<VoteChartProps> = ({
   abstainPercentage,
   size = 'md',
   className,
+  mobileOptimized = true,
+  variant = 'auto',
 }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Determine which variant to show
+  const shouldShowBar =
+    variant === 'bar' || (variant === 'auto' && mobileOptimized && isMobile);
+
+  // Mobile-optimized size mapping
   const sizeMap = {
-    sm: { width: 120, height: 120, strokeWidth: 8 },
-    md: { width: 160, height: 160, strokeWidth: 12 },
-    lg: { width: 200, height: 200, strokeWidth: 16 },
+    sm: {
+      width: isMobile ? 100 : 120,
+      height: isMobile ? 100 : 120,
+      strokeWidth: isMobile ? 6 : 8,
+      fontSize: isMobile ? 'text-lg' : 'text-xl',
+    },
+    md: {
+      width: isMobile ? 140 : 160,
+      height: isMobile ? 140 : 160,
+      strokeWidth: isMobile ? 10 : 12,
+      fontSize: isMobile ? 'text-xl' : 'text-2xl',
+    },
+    lg: {
+      width: isMobile ? 180 : 200,
+      height: isMobile ? 180 : 200,
+      strokeWidth: isMobile ? 14 : 16,
+      fontSize: isMobile ? 'text-2xl' : 'text-3xl',
+    },
   };
 
-  const { width, height, strokeWidth } = sizeMap[size];
+  const { width, height, strokeWidth, fontSize } = sizeMap[size];
   const radius = (width - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -73,6 +109,20 @@ export const VoteChart: React.FC<VoteChartProps> = ({
 
   const totalParticipation = yesPercentage + noPercentage + abstainPercentage;
 
+  // Mobile bar chart variant
+  if (shouldShowBar) {
+    return (
+      <VoteBarChart
+        yesPercentage={yesPercentage}
+        noPercentage={noPercentage}
+        abstainPercentage={abstainPercentage}
+        className={className}
+        mobileOptimized={mobileOptimized}
+      />
+    );
+  }
+
+  // Circle chart (default)
   return (
     <motion.div
       className={cn('relative', className)}
@@ -158,14 +208,22 @@ export const VoteChart: React.FC<VoteChartProps> = ({
         transition={{ duration: 0.5, delay: 0.8, ease: 'backOut' }}
       >
         <div className="text-center">
-          <div className="text-2xl font-display font-bold text-patriotWhite">
+          <div
+            className={cn('font-display font-bold text-patriotWhite', fontSize)}
+          >
             <PercentageCounter
               value={totalParticipation}
-              className="text-2xl font-display font-bold text-patriotWhite"
+              className={cn(
+                'font-display font-bold text-patriotWhite',
+                fontSize
+              )}
             />
           </div>
           <motion.div
-            className="text-xs text-textSecondary"
+            className={cn(
+              'text-textSecondary',
+              isMobile ? 'text-xs' : 'text-xs'
+            )}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 1 }}
@@ -177,14 +235,21 @@ export const VoteChart: React.FC<VoteChartProps> = ({
 
       {/* Legend */}
       <motion.div
-        className="mt-4 flex justify-center gap-4 text-sm"
+        className={cn(
+          'mt-4 flex justify-center text-sm',
+          isMobile ? 'gap-2 flex-wrap' : 'gap-4'
+        )}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 1.2 }}
       >
         <motion.div
-          className="flex items-center gap-2"
+          className={cn(
+            'flex items-center gap-2',
+            isMobile && 'touch-manipulation'
+          )}
           whileHover={{ scale: 1.05 }}
+          whileTap={isMobile ? { scale: 0.95 } : {}}
           transition={{ type: 'spring', stiffness: 400, damping: 10 }}
         >
           <motion.div
@@ -193,13 +258,22 @@ export const VoteChart: React.FC<VoteChartProps> = ({
             animate={{ scale: 1 }}
             transition={{ duration: 0.3, delay: 1.3, type: 'spring' }}
           />
-          <span className="text-textSecondary">
+          <span
+            className={cn(
+              'text-textSecondary',
+              isMobile ? 'text-sm' : 'text-sm'
+            )}
+          >
             Yes (<PercentageCounter value={yesPercentage} />)
           </span>
         </motion.div>
         <motion.div
-          className="flex items-center gap-2"
+          className={cn(
+            'flex items-center gap-2',
+            isMobile && 'touch-manipulation'
+          )}
           whileHover={{ scale: 1.05 }}
+          whileTap={isMobile ? { scale: 0.95 } : {}}
           transition={{ type: 'spring', stiffness: 400, damping: 10 }}
         >
           <motion.div
@@ -208,14 +282,23 @@ export const VoteChart: React.FC<VoteChartProps> = ({
             animate={{ scale: 1 }}
             transition={{ duration: 0.3, delay: 1.4, type: 'spring' }}
           />
-          <span className="text-textSecondary">
+          <span
+            className={cn(
+              'text-textSecondary',
+              isMobile ? 'text-sm' : 'text-sm'
+            )}
+          >
             No (<PercentageCounter value={noPercentage} />)
           </span>
         </motion.div>
         {abstainPercentage > 0 && (
           <motion.div
-            className="flex items-center gap-2"
+            className={cn(
+              'flex items-center gap-2',
+              isMobile && 'touch-manipulation'
+            )}
             whileHover={{ scale: 1.05 }}
+            whileTap={isMobile ? { scale: 0.95 } : {}}
             transition={{ type: 'spring', stiffness: 400, damping: 10 }}
           >
             <motion.div
@@ -224,7 +307,12 @@ export const VoteChart: React.FC<VoteChartProps> = ({
               animate={{ scale: 1 }}
               transition={{ duration: 0.3, delay: 1.5, type: 'spring' }}
             />
-            <span className="text-textSecondary">
+            <span
+              className={cn(
+                'text-textSecondary',
+                isMobile ? 'text-sm' : 'text-sm'
+              )}
+            >
               Abstain (<PercentageCounter value={abstainPercentage} />)
             </span>
           </motion.div>
@@ -234,12 +322,13 @@ export const VoteChart: React.FC<VoteChartProps> = ({
   );
 };
 
-// Bar Chart Component
+// Enhanced Bar Chart Component
 interface VoteBarChartProps {
   yesPercentage: number;
   noPercentage: number;
   abstainPercentage: number;
   className?: string;
+  mobileOptimized?: boolean;
 }
 
 export const VoteBarChart: React.FC<VoteBarChartProps> = ({
@@ -247,10 +336,27 @@ export const VoteBarChart: React.FC<VoteBarChartProps> = ({
   noPercentage,
   abstainPercentage,
   className,
+  mobileOptimized = true,
 }) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const barHeight = mobileOptimized && isMobile ? 'h-4' : 'h-3';
+  const spacing = mobileOptimized && isMobile ? 'space-y-4' : 'space-y-4';
+  const textSize = mobileOptimized && isMobile ? 'text-base' : 'text-sm';
+
   return (
     <motion.div
-      className={cn('space-y-4', className)}
+      className={cn(spacing, className)}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -260,19 +366,26 @@ export const VoteBarChart: React.FC<VoteBarChartProps> = ({
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
+        className={mobileOptimized && isMobile ? 'touch-manipulation' : ''}
       >
-        <div className="flex justify-between text-sm mb-2">
+        <div className={cn('flex justify-between mb-2', textSize)}>
           <span className="text-green-400 font-medium">Yes</span>
           <span className="text-patriotWhite">
             <PercentageCounter value={yesPercentage} />
           </span>
         </div>
-        <div className="w-full bg-backgroundDark rounded-full h-3 overflow-hidden">
+        <div
+          className={cn(
+            'w-full bg-backgroundDark rounded-full overflow-hidden',
+            barHeight
+          )}
+        >
           <motion.div
-            className="bg-green-500 h-3 rounded-full"
+            className={cn('bg-green-500 rounded-full', barHeight)}
             initial={{ width: 0 }}
             animate={{ width: `${yesPercentage}%` }}
             transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
+            whileHover={mobileOptimized && !isMobile ? { scale: 1.02 } : {}}
           />
         </div>
       </motion.div>
@@ -282,19 +395,26 @@ export const VoteBarChart: React.FC<VoteBarChartProps> = ({
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
+        className={mobileOptimized && isMobile ? 'touch-manipulation' : ''}
       >
-        <div className="flex justify-between text-sm mb-2">
+        <div className={cn('flex justify-between mb-2', textSize)}>
           <span className="text-red-400 font-medium">No</span>
           <span className="text-patriotWhite">
             <PercentageCounter value={noPercentage} />
           </span>
         </div>
-        <div className="w-full bg-backgroundDark rounded-full h-3 overflow-hidden">
+        <div
+          className={cn(
+            'w-full bg-backgroundDark rounded-full overflow-hidden',
+            barHeight
+          )}
+        >
           <motion.div
-            className="bg-red-500 h-3 rounded-full"
+            className={cn('bg-red-500 rounded-full', barHeight)}
             initial={{ width: 0 }}
             animate={{ width: `${noPercentage}%` }}
             transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
+            whileHover={mobileOptimized && !isMobile ? { scale: 1.02 } : {}}
           />
         </div>
       </motion.div>
@@ -305,20 +425,46 @@ export const VoteBarChart: React.FC<VoteBarChartProps> = ({
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
+          className={mobileOptimized && isMobile ? 'touch-manipulation' : ''}
         >
-          <div className="flex justify-between text-sm mb-2">
+          <div className={cn('flex justify-between mb-2', textSize)}>
             <span className="text-gray-400 font-medium">Abstain</span>
             <span className="text-patriotWhite">
               <PercentageCounter value={abstainPercentage} />
             </span>
           </div>
-          <div className="w-full bg-backgroundDark rounded-full h-3 overflow-hidden">
+          <div
+            className={cn(
+              'w-full bg-backgroundDark rounded-full overflow-hidden',
+              barHeight
+            )}
+          >
             <motion.div
-              className="bg-gray-500 h-3 rounded-full"
+              className={cn('bg-gray-500 rounded-full', barHeight)}
               initial={{ width: 0 }}
               animate={{ width: `${abstainPercentage}%` }}
               transition={{ duration: 1, delay: 0.7, ease: 'easeOut' }}
+              whileHover={mobileOptimized && !isMobile ? { scale: 1.02 } : {}}
             />
+          </div>
+        </motion.div>
+      )}
+
+      {/* Mobile Summary */}
+      {mobileOptimized && isMobile && (
+        <motion.div
+          className="mt-4 p-3 bg-backgroundLight rounded-lg border border-patriotBlue/20"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+        >
+          <div className="text-center">
+            <div className="text-lg font-medium text-patriotWhite mb-1">
+              {yesPercentage + noPercentage + abstainPercentage}% Participation
+            </div>
+            <div className="text-xs text-textSecondary">
+              Total votes cast in this proposal
+            </div>
           </div>
         </motion.div>
       )}
