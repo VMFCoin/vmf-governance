@@ -103,7 +103,7 @@ export class HolidayProposalService {
 
         // Get verified charities for selection
         const verifiedCharities = charityStore.charities
-          .filter(charity => charity.verificationStatus === 'verified')
+          .filter(charity => charity.verification.is501c3)
           .slice(0, 5) // Limit to 5 charities for voting
           .map(charity => charity.id);
 
@@ -180,7 +180,7 @@ export class HolidayProposalService {
 
       // Get verified charities
       const verifiedCharities = charityStore.charities
-        .filter(charity => charity.verificationStatus === 'verified')
+        .filter(charity => charity.verification.is501c3)
         .slice(0, 5)
         .map(charity => charity.id);
 

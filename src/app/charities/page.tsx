@@ -9,8 +9,6 @@ import {
   DollarSign,
   Building,
   Heart,
-  Star,
-  MapPin,
   X,
   ChevronDown,
   Loader2,
@@ -21,8 +19,6 @@ import { CharityImpactModal } from '@/components/charities/CharityImpactModal';
 import {
   charities,
   getCharityStats,
-  getFeaturedCharities,
-  getCharitiesByCategory,
   searchCharities,
   getCategoryDisplayName,
 } from '@/data/charities';
@@ -53,7 +49,7 @@ export default function CharitiesPage() {
   const stats = getCharityStats();
 
   // Debounced search to improve performance
-  const debouncedSearch = useCallback((query: string) => {
+  const debouncedSearch = useCallback(() => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
@@ -95,7 +91,7 @@ export default function CharitiesPage() {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    debouncedSearch(value);
+    debouncedSearch();
   };
 
   const clearFilters = () => {
@@ -334,7 +330,7 @@ export default function CharitiesPage() {
                 <div className="flex flex-wrap gap-2">
                   {searchQuery && (
                     <span className="px-2 py-1 bg-patriotBlue/20 text-patriotBlue rounded-full text-xs">
-                      Search: "{searchQuery}"
+                      Search: &quot;{searchQuery}&quot;
                     </span>
                   )}
                   {selectedCategory !== 'all' && (

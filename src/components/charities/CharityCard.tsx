@@ -6,15 +6,16 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ExternalLink,
-  Users,
-  Calendar,
-  DollarSign,
-  Shield,
   MapPin,
-  Eye,
-  Vote,
-  Heart,
+  Calendar,
+  Users,
+  DollarSign,
+  Clock,
+  CheckCircle,
   Star,
+  Building,
+  Shield,
+  Heart,
   ImageIcon,
 } from 'lucide-react';
 import { Charity } from '@/types';
