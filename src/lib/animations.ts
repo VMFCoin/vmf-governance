@@ -334,3 +334,81 @@ export const getAnimationVariants = (variants: Variants) => {
   }
   return variants;
 };
+
+// Form error variants
+export const formErrorVariants: Variants = {
+  initial: {
+    opacity: 0,
+    y: -10,
+    scale: 0.95,
+  },
+  enter: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: springConfigs.gentle,
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
+
+// Proposal type container variants
+export const proposalTypeContainerVariants: Variants = {
+  initial: {
+    opacity: 0,
+  },
+  enter: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1,
+    },
+  },
+};
+
+// Proposal type card variants
+export const proposalTypeCardVariants: Variants = {
+  initial: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95,
+  },
+  enter: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: springConfigs.gentle,
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+    },
+  },
+  hover: {
+    scale: 1.02,
+    y: -2,
+    transition: springConfigs.snappy,
+  },
+  tap: {
+    scale: 0.98,
+    transition: {
+      duration: 0.1,
+    },
+  },
+};

@@ -7,6 +7,8 @@ export { Toast, ToastContainer, useToast } from './Toast';
 export { MarkdownEditor } from './MarkdownEditor';
 export { StepIndicator } from './StepIndicator';
 export { FileUpload } from './FileUpload';
+export { FormField } from './FormField';
+export { HelpTooltip } from './HelpTooltip';
 
 // Phase 7: Animation Components
 export {

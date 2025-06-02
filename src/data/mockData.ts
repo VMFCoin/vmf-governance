@@ -25,8 +25,8 @@ export const mockCharities: Charity[] = [
     verificationStatus: 'verified',
     impactMetrics: {
       veteransServed: 200000,
+      yearsOfService: 20,
       fundingReceived: 350000000,
-      programs: ['Mental Health', 'Career Counseling', 'Long-term Support'],
     },
     documents: [
       {
@@ -54,8 +54,8 @@ export const mockCharities: Charity[] = [
     verificationStatus: 'verified',
     impactMetrics: {
       veteransServed: 150000,
+      yearsOfService: 13,
       fundingReceived: 75000000,
-      programs: ['Disaster Relief', 'Community Impact', 'Veteran Integration'],
     },
     documents: [
       {
@@ -77,8 +77,8 @@ export const mockCharities: Charity[] = [
     verificationStatus: 'verified',
     impactMetrics: {
       veteransServed: 100000,
+      yearsOfService: 19,
       fundingReceived: 45000000,
-      programs: ['Financial Assistance', 'Housing', 'Family Support'],
     },
     documents: [
       {
@@ -101,8 +101,8 @@ export const mockCharities: Charity[] = [
     verificationStatus: 'verified',
     impactMetrics: {
       veteransServed: 5000,
+      yearsOfService: 15,
       fundingReceived: 12000000,
-      programs: ['Housing', 'Job Training', 'Mental Health Support'],
     },
     documents: [
       {

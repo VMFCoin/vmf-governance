@@ -1,7 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Bell, Star } from 'lucide-react';
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Bell,
+  Clock,
+  Vote,
+  Flag,
+} from 'lucide-react';
 import { CalendarEvent } from '@/types';
 import { Card } from '@/components/ui';
 
@@ -53,27 +61,60 @@ export function CalendarSidebar({
     });
   };
 
-  const getEventTypeColor = (type: string) => {
+  const getEventTypeStyles = (type: string) => {
     switch (type) {
       case 'holiday':
-        return 'text-patriotRed';
+        return {
+          textColor: 'text-patriotRed',
+          bgColor: 'bg-patriotRed/10',
+          borderColor: 'border-patriotRed/20',
+          icon: Flag,
+        };
       case 'voting':
-        return 'text-patriotBlue';
+        return {
+          textColor: 'text-patriotBlue',
+          bgColor: 'bg-patriotBlue/10',
+          borderColor: 'border-patriotBlue/20',
+          icon: Vote,
+        };
       case 'community':
-        return 'text-starGold';
+        return {
+          textColor: 'text-starGold',
+          bgColor: 'bg-starGold/10',
+          borderColor: 'border-starGold/20',
+          icon: Bell,
+        };
       case 'announcement':
-        return 'text-textBase';
+        return {
+          textColor: 'text-textBase',
+          bgColor: 'bg-textBase/10',
+          borderColor: 'border-textBase/20',
+          icon: Bell,
+        };
       default:
-        return 'text-textSecondary';
+        return {
+          textColor: 'text-textSecondary',
+          bgColor: 'bg-textSecondary/10',
+          borderColor: 'border-textSecondary/20',
+          icon: Calendar,
+        };
     }
   };
 
   const getPriorityIndicator = (priority: string) => {
     switch (priority) {
       case 'high':
-        return <Star className="w-3 h-3 text-starGold fill-current" />;
+        return (
+          <div className="w-2 h-2 bg-patriotRed rounded-full ring-2 ring-patriotRed/30" />
+        );
       case 'medium':
-        return <Star className="w-3 h-3 text-starGold/60" />;
+        return (
+          <div className="w-2 h-2 bg-starGold rounded-full ring-2 ring-starGold/30" />
+        );
+      case 'low':
+        return (
+          <div className="w-2 h-2 bg-textSecondary rounded-full ring-2 ring-textSecondary/30" />
+        );
       default:
         return null;
     }
@@ -124,13 +165,13 @@ export function CalendarSidebar({
           <div className="flex items-center space-x-2">
             <button
               onClick={() => navigateMonth('prev')}
-              className="p-1 text-textSecondary hover:text-patriotWhite transition-colors"
+              className="p-1 text-textSecondary hover:text-patriotWhite transition-colors rounded"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => navigateMonth('next')}
-              className="p-1 text-textSecondary hover:text-patriotWhite transition-colors"
+              className="p-1 text-textSecondary hover:text-patriotWhite transition-colors rounded"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -146,33 +187,41 @@ export function CalendarSidebar({
         {/* Current Month Events */}
         <div className="space-y-2">
           {currentMonthEvents.length > 0 ? (
-            currentMonthEvents.map(event => (
-              <div
-                key={event.id}
-                onClick={() => onEventClick?.(event)}
-                className="flex items-center justify-between p-2 rounded-lg bg-backgroundAccent/30 hover:bg-backgroundAccent/50 cursor-pointer transition-colors"
-              >
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">{event.flagIcon}</span>
-                  <div>
-                    <p className="text-sm font-medium text-patriotWhite">
-                      {event.title}
-                    </p>
-                    <p className="text-xs text-textSecondary">
-                      {new Date(event.date).toLocaleDateString('en-US', {
-                        day: 'numeric',
-                      })}
-                    </p>
+            currentMonthEvents.map(event => {
+              const typeStyles = getEventTypeStyles(event.type);
+              return (
+                <div
+                  key={event.id}
+                  onClick={() => onEventClick?.(event)}
+                  className="flex items-center justify-between p-3 rounded-lg bg-backgroundAccent/30 hover:bg-backgroundAccent/50 cursor-pointer transition-all duration-200 border border-transparent hover:border-patriotBlue/20"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="text-lg">{event.flagIcon}</span>
+                    <div>
+                      <p className="text-sm font-medium text-patriotWhite">
+                        {event.title}
+                      </p>
+                      <p className="text-xs text-textSecondary">
+                        {new Date(event.date).toLocaleDateString('en-US', {
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {getPriorityIndicator(event.priority)}
+                    {event.isVotingDay && (
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-patriotWhite border border-patriotBlue/30">
+                        <Vote className="w-3 h-3 text-patriotBlue" />
+                        <span className="text-xs font-medium text-patriotBlue">
+                          Vote
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-1">
-                  {getPriorityIndicator(event.priority)}
-                  {event.isVotingDay && (
-                    <div className="w-2 h-2 bg-patriotRed rounded-full"></div>
-                  )}
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="text-textSecondary text-sm text-center py-4">
               No events this month
@@ -191,40 +240,52 @@ export function CalendarSidebar({
         </div>
 
         <div className="space-y-3">
-          {upcomingEvents.map(event => (
-            <div
-              key={event.id}
-              onClick={() => onEventClick?.(event)}
-              className="flex items-start space-x-3 p-3 rounded-lg bg-backgroundAccent/20 hover:bg-backgroundAccent/40 cursor-pointer transition-colors"
-            >
-              <div className="flex-shrink-0">
-                <span className="text-2xl">{event.flagIcon}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h4 className="text-sm font-medium text-patriotWhite truncate">
-                    {event.title}
-                  </h4>
-                  {getPriorityIndicator(event.priority)}
+          {upcomingEvents.map(event => {
+            const typeStyles = getEventTypeStyles(event.type);
+            const TypeIcon = typeStyles.icon;
+
+            return (
+              <div
+                key={event.id}
+                onClick={() => onEventClick?.(event)}
+                className={`flex items-start space-x-3 p-3 rounded-lg ${typeStyles.bgColor} border ${typeStyles.borderColor} hover:bg-opacity-80 cursor-pointer transition-all duration-200`}
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  <span className="text-xl">{event.flagIcon}</span>
                 </div>
-                <p className="text-xs text-textSecondary mb-1">
-                  {formatEventDate(event.date)}
-                </p>
-                <div className="flex items-center space-x-2">
-                  <span
-                    className={`text-xs font-medium ${getEventTypeColor(event.type)}`}
-                  >
-                    {event.type.toUpperCase()}
-                  </span>
-                  {event.isVotingDay && (
-                    <span className="text-xs bg-patriotRed text-patriotWhite px-1 rounded">
-                      VOTING
-                    </span>
-                  )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-medium text-patriotWhite truncate">
+                      {event.title}
+                    </h4>
+                    {getPriorityIndicator(event.priority)}
+                  </div>
+                  <p className="text-xs text-textSecondary mb-2">
+                    {formatEventDate(event.date)}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1">
+                      <TypeIcon className={`w-3 h-3 ${typeStyles.textColor}`} />
+                      <span
+                        className={`text-xs font-medium ${typeStyles.textColor}`}
+                      >
+                        {event.type.charAt(0).toUpperCase() +
+                          event.type.slice(1)}
+                      </span>
+                    </div>
+                    {event.isVotingDay && (
+                      <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-patriotWhite border border-patriotBlue/30">
+                        <Vote className="w-2.5 h-2.5 text-patriotBlue" />
+                        <span className="text-xs font-medium text-patriotBlue">
+                          Active
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {upcomingEvents.length === 0 && (
@@ -237,22 +298,38 @@ export function CalendarSidebar({
       {/* Legend */}
       <Card>
         <h4 className="text-sm font-semibold text-patriotWhite mb-3">Legend</h4>
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-patriotRed rounded-full"></div>
-            <span className="text-textSecondary">Voting Days</span>
+        <div className="space-y-3 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-textSecondary">Priority Levels</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <Star className="w-3 h-3 text-starGold fill-current" />
-            <span className="text-textSecondary">High Priority</span>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-patriotRed rounded-full ring-2 ring-patriotRed/30" />
+              <span className="text-textSecondary">High</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-starGold rounded-full ring-2 ring-starGold/30" />
+              <span className="text-textSecondary">Medium</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-textSecondary rounded-full ring-2 ring-textSecondary/30" />
+              <span className="text-textSecondary">Low</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-patriotBlue font-medium">VOTING</span>
-            <span className="text-textSecondary">Voting Events</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-patriotRed font-medium">HOLIDAY</span>
-            <span className="text-textSecondary">National Holidays</span>
+          <div className="border-t border-patriotBlue/20 pt-3 mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-textSecondary">Event Types</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Flag className="w-3 h-3 text-patriotRed" />
+                <span className="text-textSecondary">National Holidays</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Vote className="w-3 h-3 text-patriotBlue" />
+                <span className="text-textSecondary">Voting Events</span>
+              </div>
+            </div>
           </div>
         </div>
       </Card>

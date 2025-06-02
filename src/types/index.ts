@@ -19,28 +19,45 @@ export interface BaseProposal {
 export interface Charity {
   id: string;
   name: string;
-  description: string;
   website: string;
-  ein: string; // Tax ID
-  category:
-    | 'veterans'
-    | 'military_families'
-    | 'disabled_veterans'
-    | 'mental_health'
-    | 'general_support';
-  verificationStatus: 'verified' | 'pending' | 'rejected';
+  logo: string;
+  mission: string;
+  description: string;
+  category: CharityCategory;
   impactMetrics: {
     veteransServed: number;
+    yearsOfService: number;
     fundingReceived: number;
-    programs: string[];
   };
-  documents: {
-    type: '501c3' | 'financial_report' | 'impact_report';
-    url: string;
-    uploadedAt: Date;
-  }[];
-  addedAt: Date;
-  verifiedAt?: Date;
+  verification: {
+    is501c3: boolean;
+    verifiedDate: Date;
+    taxId?: string;
+  };
+  tags: string[];
+  featured: boolean;
+  establishedYear: number;
+  location: {
+    city: string;
+    state: string;
+    country: string;
+  };
+}
+
+export type CharityCategory =
+  | 'disabled_veterans'
+  | 'military_families'
+  | 'veteran_housing'
+  | 'mental_health'
+  | 'education'
+  | 'employment'
+  | 'general_support';
+
+export interface CharityStats {
+  totalCharities: number;
+  totalVeteransServed: number;
+  totalFundingDistributed: number;
+  categoriesSupported: number;
 }
 
 export interface CharitySubmission {

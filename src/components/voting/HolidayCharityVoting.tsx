@@ -130,7 +130,7 @@ export const HolidayCharityVoting: React.FC<HolidayCharityVotingProps> = ({
                     <span className="capitalize">
                       {charity.category.replace('_', ' ')}
                     </span>
-                    {charity.verificationStatus === 'verified' && (
+                    {charity.verification.is501c3 && (
                       <span className="ml-2 px-2 py-1 bg-green-500/20 text-green-400 rounded-full">
                         Verified
                       </span>

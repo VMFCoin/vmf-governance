@@ -14,20 +14,28 @@ import {
   Calendar,
   BarChart3,
   Plus,
+  Heart,
+  Building,
+  Code,
+  Zap,
+  Shield,
 } from 'lucide-react';
 import { Header, Footer, Button, Card, Input, Dropdown } from '@/components';
 import { ProposalCardSkeleton } from '@/components/ui';
 import { TypeSpecificProposalCard } from '@/components/proposals';
 import { mockProposals } from '@/data/mockData';
-import { Proposal } from '@/types';
+import { Proposal, ProposalType } from '@/types';
 
 type SortOption = 'newest' | 'oldest' | 'mostVotes' | 'timeLeft';
 type FilterOption = 'all' | 'active' | 'passed' | 'failed' | 'pending';
+type ProposalTypeFilter = 'all' | ProposalType;
 
 export default function VotePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [proposalTypeFilter, setProposalTypeFilter] =
+    useState<ProposalTypeFilter>('all');
 
   // Sort options for dropdown
   const sortOptions = [
@@ -53,9 +61,59 @@ export default function VotePage() {
     },
   ];
 
+  // Proposal type tabs configuration
+  const proposalTypeTabs = [
+    {
+      value: 'all' as ProposalTypeFilter,
+      label: 'All Proposals',
+      icon: <BarChart3 className="w-4 h-4" />,
+      description: 'View all proposal types',
+    },
+    {
+      value: 'holiday_charity' as ProposalTypeFilter,
+      label: 'Holiday Charity',
+      icon: (
+        <div className="flex items-center">
+          <Calendar className="w-4 h-4 mr-1" />
+          <Heart className="w-3 h-3" />
+        </div>
+      ),
+      description: 'Holiday funding proposals',
+    },
+    {
+      value: 'charity_directory' as ProposalTypeFilter,
+      label: 'Charity Directory',
+      icon: (
+        <div className="flex items-center">
+          <Building className="w-4 h-4 mr-1" />
+          <Shield className="w-3 h-3" />
+        </div>
+      ),
+      description: 'New charity additions',
+    },
+    {
+      value: 'platform_feature' as ProposalTypeFilter,
+      label: 'Platform Features',
+      icon: (
+        <div className="flex items-center">
+          <Code className="w-4 h-4 mr-1" />
+          <Zap className="w-3 h-3" />
+        </div>
+      ),
+      description: 'Platform improvements',
+    },
+  ];
+
   // Filter and sort proposals
   const filteredAndSortedProposals = useMemo(() => {
     let filtered = mockProposals;
+
+    // Apply proposal type filter
+    if (proposalTypeFilter !== 'all') {
+      filtered = filtered.filter(
+        proposal => proposal.type === proposalTypeFilter
+      );
+    }
 
     // Apply search filter
     if (searchTerm) {
@@ -76,9 +134,15 @@ export default function VotePage() {
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'newest':
-          return parseInt(b.id) - parseInt(a.id);
+          return (
+            parseInt(b.id.split('-').pop() || '0') -
+            parseInt(a.id.split('-').pop() || '0')
+          );
         case 'oldest':
-          return parseInt(a.id) - parseInt(b.id);
+          return (
+            parseInt(a.id.split('-').pop() || '0') -
+            parseInt(b.id.split('-').pop() || '0')
+          );
         case 'mostVotes':
           return (
             b.yesPercentage +
@@ -96,7 +160,7 @@ export default function VotePage() {
     });
 
     return sorted;
-  }, [searchTerm, sortBy, filterBy]);
+  }, [searchTerm, sortBy, filterBy, proposalTypeFilter]);
 
   const getStatusIcon = (status: Proposal['status']) => {
     switch (status) {
@@ -112,9 +176,29 @@ export default function VotePage() {
   };
 
   const getStatusCount = (status: FilterOption) => {
-    if (status === 'all') return mockProposals.length;
-    return mockProposals.filter(p => p.status === status).length;
+    const baseProposals =
+      proposalTypeFilter === 'all'
+        ? mockProposals
+        : mockProposals.filter(p => p.type === proposalTypeFilter);
+
+    if (status === 'all') return baseProposals.length;
+    return baseProposals.filter(p => p.status === status).length;
   };
+
+  const getProposalTypeCount = (type: ProposalTypeFilter) => {
+    if (type === 'all') return mockProposals.length;
+    return mockProposals.filter(p => p.type === type).length;
+  };
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setFilterBy('all');
+    setSortBy('newest');
+    setProposalTypeFilter('all');
+  };
+
+  const hasActiveFilters =
+    searchTerm || filterBy !== 'all' || proposalTypeFilter !== 'all';
 
   return (
     <main className="min-h-screen landing-page-flag">
@@ -133,11 +217,65 @@ export default function VotePage() {
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-4xl font-display font-bold text-patriotWhite mb-4">
-            Active Proposals
+            Governance Proposals
           </h1>
           <p className="text-xl text-textSecondary leading-relaxed">
             Vote on proposals that matter to the veteran community
           </p>
+        </div>
+
+        {/* Proposal Type Tabs */}
+        <div className="mb-8">
+          <div className="border-b border-patriotBlue/30">
+            <div className="flex flex-wrap gap-1">
+              {proposalTypeTabs.map(tab => (
+                <button
+                  key={tab.value}
+                  onClick={() => setProposalTypeFilter(tab.value)}
+                  className={`group relative px-6 py-4 font-semibold transition-all duration-300 border-b-2 ${
+                    proposalTypeFilter === tab.value
+                      ? 'border-patriotRed text-patriotRed bg-patriotRed/5'
+                      : 'border-transparent text-textSecondary hover:text-textBase hover:border-patriotBlue/50 hover:bg-backgroundLight/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`transition-colors ${
+                        proposalTypeFilter === tab.value
+                          ? 'text-patriotRed'
+                          : 'text-textSecondary group-hover:text-textBase'
+                      }`}
+                    >
+                      {tab.icon}
+                    </div>
+                    <div className="text-left">
+                      <div className="flex items-center gap-2">
+                        <span>{tab.label}</span>
+                        <span
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
+                            proposalTypeFilter === tab.value
+                              ? 'bg-patriotRed/20 text-patriotRed'
+                              : 'bg-backgroundDark text-textSecondary group-hover:bg-backgroundLight group-hover:text-textBase'
+                          }`}
+                        >
+                          {getProposalTypeCount(tab.value)}
+                        </span>
+                      </div>
+                      <div
+                        className={`text-xs mt-1 transition-colors ${
+                          proposalTypeFilter === tab.value
+                            ? 'text-patriotRed/80'
+                            : 'text-textSecondary/80'
+                        }`}
+                      >
+                        {tab.description}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Enhanced Filters and Search */}
@@ -217,29 +355,54 @@ export default function VotePage() {
         {/* Results Summary */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <p className="text-textSecondary font-medium">
-              Showing{' '}
-              <span className="text-patriotWhite font-bold">
-                {filteredAndSortedProposals.length}
-              </span>{' '}
-              of{' '}
-              <span className="text-patriotWhite font-bold">
-                {mockProposals.length}
-              </span>{' '}
-              proposals
-            </p>
-            {(searchTerm || filterBy !== 'all') && (
+            <div className="flex items-center gap-4">
+              <p className="text-textSecondary font-medium">
+                Showing{' '}
+                <span className="text-patriotWhite font-bold">
+                  {filteredAndSortedProposals.length}
+                </span>{' '}
+                of{' '}
+                <span className="text-patriotWhite font-bold">
+                  {proposalTypeFilter === 'all'
+                    ? mockProposals.length
+                    : getProposalTypeCount(proposalTypeFilter)}
+                </span>{' '}
+                {proposalTypeFilter !== 'all' && (
+                  <span className="text-patriotRed font-semibold">
+                    {proposalTypeTabs
+                      .find(tab => tab.value === proposalTypeFilter)
+                      ?.label.toLowerCase()}
+                  </span>
+                )}{' '}
+                proposals
+              </p>
+              {proposalTypeFilter !== 'all' && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-patriotRed/10 border border-patriotRed/30 rounded-lg">
+                  <div className="text-patriotRed">
+                    {
+                      proposalTypeTabs.find(
+                        tab => tab.value === proposalTypeFilter
+                      )?.icon
+                    }
+                  </div>
+                  <span className="text-patriotRed text-sm font-medium">
+                    {
+                      proposalTypeTabs.find(
+                        tab => tab.value === proposalTypeFilter
+                      )?.label
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
+            {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterBy('all');
-                  setSortBy('newest');
-                }}
+                onClick={clearAllFilters}
                 className="text-patriotRed hover:text-red-400"
               >
-                Clear Filters
+                Clear All Filters
               </Button>
             )}
           </div>
@@ -259,20 +422,13 @@ export default function VotePage() {
               No proposals found
             </h3>
             <p className="text-textSecondary mb-8 text-lg leading-relaxed max-w-md mx-auto">
-              Try adjusting your search terms or filter criteria to find what
-              you're looking for
+              {hasActiveFilters
+                ? "Try adjusting your search terms or filter criteria to find what you're looking for"
+                : 'No proposals are currently available in this category'}
             </p>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => {
-                setSearchTerm('');
-                setFilterBy('all');
-                setSortBy('newest');
-              }}
-            >
+            <Button variant="outline" size="lg" onClick={clearAllFilters}>
               <TrendingUp className="w-5 h-5 mr-2" />
-              Reset All Filters
+              {hasActiveFilters ? 'Reset All Filters' : 'View All Proposals'}
             </Button>
           </Card>
         )}

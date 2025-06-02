@@ -11,9 +11,21 @@ import {
   ProposalCard,
 } from '@/components';
 import { TypeSpecificProposalCard } from '@/components/proposals';
-import { mockProposals, mockHolidays } from '@/data/mockData';
+import { CalendarSidebar } from '@/components/community';
+import { mockProposals } from '@/data/mockData';
+import { getUpcomingHolidayEvents } from '@/data/holidays';
+import { CalendarEvent } from '@/types';
 
 export default function Home() {
+  // Get dynamic holiday events instead of static mock data
+  const holidayEvents = getUpcomingHolidayEvents();
+
+  const handleEventClick = (event: CalendarEvent) => {
+    console.log('Event clicked:', event);
+    // In a real app, this might open an event detail modal or navigate to event page
+    // For now, we'll just log the event
+  };
+
   return (
     <main className="min-h-screen landing-page-flag">
       {/* Header */}
@@ -112,7 +124,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-3xl font-display font-bold text-patriotWhite">
-              Active Proposals
+              Active Proposals & Holiday Calendar
             </h2>
             <Button variant="secondary" asChild>
               <Link href="/submit">+ Submit Proposal</Link>
@@ -130,34 +142,13 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Right Column - Holiday Schedule */}
-            <Card>
-              <h3 className="text-xl font-semibold mb-6 text-patriotWhite">
-                National Holiday Giveaway Schedule
-              </h3>
-              <div className="space-y-4">
-                {mockHolidays.map(holiday => (
-                  <div key={holiday.id} className="flex items-center">
-                    <div
-                      className={`w-4 h-4 rounded-full mr-3 ${
-                        holiday.isVotingDay
-                          ? 'bg-patriotRed'
-                          : 'border-2 border-patriotBlue'
-                      }`}
-                    ></div>
-                    <span className="text-textSecondary">{holiday.name}</span>
-                  </div>
-                ))}
-                <div className="mt-6 pt-4 border-t border-patriotBlue/30">
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 bg-patriotRed rounded-full mr-3"></div>
-                    <span className="text-patriotWhite font-medium">
-                      Voting Days
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Card>
+            {/* Right Column - Dynamic Holiday Calendar */}
+            <div>
+              <CalendarSidebar
+                events={holidayEvents}
+                onEventClick={handleEventClick}
+              />
+            </div>
           </div>
         </div>
       </section>

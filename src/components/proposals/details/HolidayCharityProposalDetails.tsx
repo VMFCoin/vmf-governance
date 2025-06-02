@@ -271,7 +271,7 @@ export const HolidayCharityProposalDetails: React.FC<
                         <h3 className="font-semibold text-patriotWhite">
                           {charity.name}
                         </h3>
-                        {charity.verificationStatus === 'verified' && (
+                        {charity.verification.is501c3 && (
                           <SimpleTooltip text="Verified charity">
                             <CheckCircle className="w-4 h-4 text-green-400" />
                           </SimpleTooltip>

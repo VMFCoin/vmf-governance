@@ -24,6 +24,7 @@ import {
   mockCalendarEvents,
   mockNotifications,
 } from '@/data/mockData';
+import { getUpcomingHolidayEvents } from '@/data/holidays';
 import { CommunityPost, CalendarEvent } from '@/types';
 
 export default function CommunityPage() {
@@ -32,6 +33,12 @@ export default function CommunityPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Combine holiday events with community events
+  const holidayEvents = getUpcomingHolidayEvents();
+  const allEvents = [...holidayEvents, ...mockCalendarEvents].sort(
+    (a, b) => a.date.getTime() - b.date.getTime()
+  );
 
   // Filter and sort posts
   const filteredPosts = posts
@@ -137,98 +144,79 @@ export default function CommunityPage() {
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-display font-bold text-patriotWhite mb-2">
-                Community Hub
-              </h1>
-              <p className="text-xl text-textSecondary">
-                Share ideas, discuss proposals, and engage with the VMF
-                community
-              </p>
-            </div>
-            <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="mt-4 lg:mt-0"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Post
-            </Button>
-          </div>
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-4xl font-display font-bold text-patriotWhite mb-4">
+            Community Hub
+          </h1>
+          <p className="text-xl text-textSecondary leading-relaxed">
+            Connect with fellow veterans and VMF community members
+          </p>
+        </div>
 
-          {/* Community Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="card text-center">
-              <div className="text-2xl font-bold text-patriotBlue mb-1">
-                {stats.all}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          {Object.entries(stats).map(([category, count]) => (
+            <div
+              key={category}
+              className="bg-backgroundAccent/30 border border-patriotBlue/30 rounded-lg p-4 text-center"
+            >
+              <div className="text-2xl font-bold text-patriotWhite">
+                {count}
               </div>
-              <div className="text-sm text-textSecondary">Total Posts</div>
-            </div>
-            <div className="card text-center">
-              <div className="text-2xl font-bold text-patriotRed mb-1">
-                {stats.idea}
+              <div className="text-sm text-textSecondary capitalize">
+                {category === 'all' ? 'Total Posts' : category}
               </div>
-              <div className="text-sm text-textSecondary">Ideas</div>
             </div>
-            <div className="card text-center">
-              <div className="text-2xl font-bold text-starGold mb-1">
-                {stats.discussion}
-              </div>
-              <div className="text-sm text-textSecondary">Discussions</div>
-            </div>
-            <div className="card text-center">
-              <div className="text-2xl font-bold text-patriotBlue mb-1">
-                {stats.feedback}
-              </div>
-              <div className="text-sm text-textSecondary">Feedback</div>
-            </div>
+          ))}
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+          <div className="flex-1">
+            <Input
+              placeholder="Search posts, authors, or tags..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex gap-4">
+            <Dropdown
+              options={categoryOptions}
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              placeholder="Category"
+            />
+            <Dropdown
+              options={sortOptions}
+              value={sortBy}
+              onChange={setSortBy}
+              placeholder="Sort by"
+            />
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Post
+            </Button>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Search and Filters */}
-            <div className="card mb-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* Search */}
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-textSecondary" />
-                    <Input
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
-                      placeholder="Search posts, authors, or tags..."
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Category Filter */}
-                <div className="md:w-48">
-                  <Dropdown
-                    value={selectedCategory}
-                    onChange={setSelectedCategory}
-                    options={categoryOptions}
-                    placeholder="Category"
-                  />
-                </div>
-
-                {/* Sort */}
-                <div className="md:w-48">
-                  <Dropdown
-                    value={sortBy}
-                    onChange={setSortBy}
-                    options={sortOptions}
-                    placeholder="Sort by"
-                  />
-                </div>
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Posts */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-patriotWhite">
+                Community Posts
+              </h2>
+              <div className="flex items-center text-textSecondary">
+                <Clock className="w-4 h-4 mr-2" />
+                <span className="text-sm">
+                  {filteredPosts.length} posts found
+                </span>
               </div>
             </div>
 
-            {/* Posts List */}
             <div className="space-y-6">
               {filteredPosts.length > 0 ? (
                 filteredPosts.map(post => (
@@ -268,7 +256,7 @@ export default function CommunityPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <CalendarSidebar
-              events={mockCalendarEvents}
+              events={allEvents}
               onEventClick={handleEventClick}
             />
           </div>
