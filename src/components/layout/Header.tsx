@@ -8,6 +8,8 @@ import { ConnectWallet } from '../wallet';
 import { NotificationPanel } from '../community';
 import { mockNotifications } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { SecureConnectWallet } from '../wallet/SecureConnectWallet';
+import { HydrationBoundary } from './HydrationBoundary';
 
 interface HeaderProps {
   className?: string;
@@ -83,7 +85,13 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
               onMarkAsRead={handleMarkAsRead}
               onMarkAllAsRead={handleMarkAllAsRead}
             />
-            <ConnectWallet />
+            <HydrationBoundary
+              fallback={
+                <div className="animate-pulse bg-gray-200 h-10 w-32 rounded-lg" />
+              }
+            >
+              <SecureConnectWallet />
+            </HydrationBoundary>
           </div>
         </div>
       </div>

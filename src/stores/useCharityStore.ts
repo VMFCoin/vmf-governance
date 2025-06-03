@@ -117,9 +117,13 @@ export const useCharityStore = create<CharityState>()(
 
         // Filter by verification status
         if (verificationFilter !== 'all') {
-          filtered = filtered.filter(
-            c => c.verificationStatus === verificationFilter
-          );
+          filtered = filtered.filter(c => {
+            if (verificationFilter === 'verified') {
+              return c.verification.is501c3;
+            }
+            // For now, treat non-verified as pending since we don't have a status field
+            return !c.verification.is501c3;
+          });
         }
 
         // Filter by search query
@@ -141,12 +145,12 @@ export const useCharityStore = create<CharityState>()(
       },
 
       getVerifiedCharities: () => {
-        return get().charities.filter(c => c.verificationStatus === 'verified');
+        return get().charities.filter(c => c.verification.is501c3);
       },
 
       getCharitiesByCategory: category => {
         return get().charities.filter(
-          c => c.category === category && c.verificationStatus === 'verified'
+          c => c.category === category && c.verification.is501c3
         );
       },
     }),
