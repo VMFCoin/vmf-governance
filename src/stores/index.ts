@@ -11,6 +11,8 @@ export type { CommunityState } from './useCommunityStore';
 export { useUserStore } from './useUserStore';
 export type { UserState, UserPreferences } from './useUserStore';
 
+export { useUserProfileStore } from './useUserProfileStore';
+
 export { useUIStore } from './useUIStore';
 export type { UIState, Toast, Modal } from './useUIStore';
 
@@ -25,6 +27,7 @@ import { useWalletStore } from './useWalletStore';
 import { useProposalStore } from './useProposalStore';
 import { useCommunityStore } from './useCommunityStore';
 import { useUserStore } from './useUserStore';
+import { useUserProfileStore } from './useUserProfileStore';
 import { useUIStore } from './useUIStore';
 import { useCharityStore } from './useCharityStore';
 import { useHolidayStore } from './useHolidayStore';
@@ -35,6 +38,7 @@ export const useVMFStores = () => ({
   proposals: useProposalStore(),
   community: useCommunityStore(),
   user: useUserStore(),
+  userProfile: useUserProfileStore(),
   ui: useUIStore(),
   charity: useCharityStore(),
   holiday: useHolidayStore(),
