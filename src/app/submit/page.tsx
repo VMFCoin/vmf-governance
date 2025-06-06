@@ -16,6 +16,7 @@ import {
   FileUpload,
   Dropdown,
   useToast,
+  ProfileGuard,
 } from '@/components';
 import {
   ProposalFormData,
@@ -1325,119 +1326,124 @@ export default function SubmitPage() {
   };
 
   return (
-    <main className="min-h-screen landing-page-flag">
-      <Header />
+    <ProfileGuard fallbackMessage="You need a profile to submit governance proposals.">
+      <main className="min-h-screen landing-page-flag">
+        <Header />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link
-          href="/vote"
-          className="inline-flex items-center text-patriotRed hover:text-red-400 mb-8 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Proposals
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-4xl font-display font-bold text-patriotWhite mb-4">
-            Submit New Proposal
-          </h1>
-          <p className="text-xl text-textSecondary">
-            Help shape the future of veteran support through community-driven
-            proposals
-          </p>
-        </div>
-
-        {/* Step Indicator */}
-        <div className="mb-12">
-          <StepIndicator steps={getCurrentSteps()} currentStep={currentStep} />
-        </div>
-
-        {/* Form Content */}
-        <Card className="p-8 mb-8">
-          {currentStep !== 0 && (
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-patriotWhite mb-2">
-                {getCurrentSteps()[currentStep].title}
-              </h2>
-              <p className="text-textSecondary">
-                {getCurrentSteps()[currentStep].description}
-              </p>
-            </div>
-          )}
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{
-                duration: 0.25,
-                ease: [0.4, 0.0, 0.2, 1],
-              }}
-            >
-              {renderStepContent()}
-            </motion.div>
-          </AnimatePresence>
-        </Card>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="secondary"
-            onClick={prevStep}
-            disabled={currentStep === 0}
-            className="flex items-center"
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Link
+            href="/vote"
+            className="inline-flex items-center text-patriotRed hover:text-red-400 mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Previous
-          </Button>
+            Back to Proposals
+          </Link>
 
-          <div className="flex items-center space-x-4">
+          <div className="mb-8">
+            <h1 className="text-4xl font-display font-bold text-patriotWhite mb-4">
+              Submit New Proposal
+            </h1>
+            <p className="text-xl text-textSecondary">
+              Help shape the future of veteran support through community-driven
+              proposals
+            </p>
+          </div>
+
+          {/* Step Indicator */}
+          <div className="mb-12">
+            <StepIndicator
+              steps={getCurrentSteps()}
+              currentStep={currentStep}
+            />
+          </div>
+
+          {/* Form Content */}
+          <Card className="p-8 mb-8">
+            {currentStep !== 0 && (
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-patriotWhite mb-2">
+                  {getCurrentSteps()[currentStep].title}
+                </h2>
+                <p className="text-textSecondary">
+                  {getCurrentSteps()[currentStep].description}
+                </p>
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{
+                  duration: 0.25,
+                  ease: [0.4, 0.0, 0.2, 1],
+                }}
+              >
+                {renderStepContent()}
+              </motion.div>
+            </AnimatePresence>
+          </Card>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center">
             <Button
-              variant="ghost"
-              onClick={() => {
-                localStorage.setItem(
-                  'vmf-proposal-draft',
-                  JSON.stringify(formData)
-                );
-                showSuccess('Draft saved successfully!');
-              }}
+              variant="secondary"
+              onClick={prevStep}
+              disabled={currentStep === 0}
               className="flex items-center"
             >
-              <Save className="w-4 h-4 mr-2" />
-              Save Draft
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Previous
             </Button>
 
-            {currentStep < getCurrentSteps().length - 1 ? (
-              <Button onClick={nextStep} className="flex items-center">
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            ) : (
+            <div className="flex items-center space-x-4">
               <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
+                variant="ghost"
+                onClick={() => {
+                  localStorage.setItem(
+                    'vmf-proposal-draft',
+                    JSON.stringify(formData)
+                  );
+                  showSuccess('Draft saved successfully!');
+                }}
                 className="flex items-center"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-patriotWhite border-t-transparent rounded-full animate-spin mr-2" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Submit Proposal
-                  </>
-                )}
+                <Save className="w-4 h-4 mr-2" />
+                Save Draft
               </Button>
-            )}
+
+              {currentStep < getCurrentSteps().length - 1 ? (
+                <Button onClick={nextStep} className="flex items-center">
+                  Next
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="flex items-center"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-patriotWhite border-t-transparent rounded-full animate-spin mr-2" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Submit Proposal
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <Footer />
-    </main>
+        <Footer />
+      </main>
+    </ProfileGuard>
   );
 }

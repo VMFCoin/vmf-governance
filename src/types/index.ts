@@ -269,3 +269,83 @@ export interface Notification {
   createdAt: Date;
   actionUrl?: string;
 }
+
+// Token Locking and ve-Governance Types (Phase 15)
+export interface TokenLock {
+  id: number; // NFT token ID
+  owner: string; // wallet address
+  amount: bigint; // locked token amount
+  lockDuration: number; // duration in seconds
+  createdAt: Date;
+  expiresAt: Date;
+  warmupEndsAt: Date; // 3 days after creation
+  votingPower: bigint; // calculated voting power
+  isWarmupComplete: boolean;
+}
+
+export interface MockLockedBalance {
+  amount: bigint;
+  end: number; // timestamp
+  votingPower: bigint;
+}
+
+export interface MockGaugeVote {
+  gauge: string; // gauge address/identifier
+  weight: number; // voting weight (0-10000 basis points)
+}
+
+export interface GaugeInfo {
+  id: string;
+  target: string; // target contract/identifier
+  metadata: string; // JSON metadata
+  totalVotes: bigint;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface VotingPowerBreakdown {
+  totalLocked: bigint;
+  totalVotingPower: bigint;
+  locks: TokenLock[];
+  powerUsed: bigint;
+  powerAvailable: bigint;
+}
+
+// Transaction simulation types
+export interface MockTransaction {
+  hash: string;
+  status: 'pending' | 'confirmed' | 'failed';
+  type: 'approve' | 'lock' | 'vote' | 'increase_amount' | 'increase_duration';
+  timestamp: Date;
+  gasUsed?: bigint;
+  blockNumber?: number;
+}
+
+export interface TokenApproval {
+  owner: string;
+  spender: string;
+  amount: bigint;
+  timestamp: Date;
+}
+
+// Lock creation parameters
+export interface CreateLockParams {
+  amount: bigint;
+  duration: number; // in seconds
+}
+
+export interface IncreaseLockParams {
+  tokenId: number;
+  amount?: bigint;
+  duration?: number;
+}
+
+// Voting power requirement levels
+export type VotingPowerRequirement = 'none' | 'any' | 'minimum';
+
+export interface VotingRequirements {
+  profile: boolean;
+  votingPower: VotingPowerRequirement;
+  minimumPower?: bigint;
+  warmupComplete?: boolean;
+}

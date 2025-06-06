@@ -16,6 +16,7 @@ import {
 import { Button, Card, Input } from '@/components/ui';
 import { CharityCard } from '@/components/charities/CharityCard';
 import { CharityImpactModal } from '@/components/charities/CharityImpactModal';
+import { Header } from '@/components/layout/Header';
 import {
   charities,
   getCharityStats,
@@ -105,6 +106,7 @@ export default function CharitiesPage() {
 
   return (
     <div className="min-h-screen landing-page-flag">
+      <Header />
       {/* Hero Section with American Flag Background */}
       <section className="relative py-20 hero-section">
         <div className="absolute inset-0 bg-backgroundDark/60" />

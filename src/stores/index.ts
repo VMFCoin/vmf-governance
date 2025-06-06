@@ -22,6 +22,8 @@ export type { CharityState } from './useCharityStore';
 export { useHolidayStore } from './useHolidayStore';
 export type { HolidayState } from './useHolidayStore';
 
+export { useTokenLockStore } from './useTokenLockStore';
+
 // Import stores for the combined hook
 import { useWalletStore } from './useWalletStore';
 import { useProposalStore } from './useProposalStore';
@@ -31,6 +33,7 @@ import { useUserProfileStore } from './useUserProfileStore';
 import { useUIStore } from './useUIStore';
 import { useCharityStore } from './useCharityStore';
 import { useHolidayStore } from './useHolidayStore';
+import { useTokenLockStore } from './useTokenLockStore';
 
 // Combined store hook for components that need multiple stores
 export const useVMFStores = () => ({
@@ -42,4 +45,5 @@ export const useVMFStores = () => ({
   ui: useUIStore(),
   charity: useCharityStore(),
   holiday: useHolidayStore(),
+  tokenLock: useTokenLockStore(),
 });
