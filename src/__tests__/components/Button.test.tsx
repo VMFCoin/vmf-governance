@@ -108,7 +108,7 @@ describe('Button Component', () => {
   it('maintains focus styles for accessibility', () => {
     render(<Button>Focus me</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('focus:outline-none', 'focus:ring-2');
+    expect(button).toHaveClass('focus:outline-none focus:ring-2');
   });
 
   it('renders primary variant with gradient overlay', () => {

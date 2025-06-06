@@ -10,9 +10,13 @@ import {
 // Mock performance API
 const mockPerformance = {
   now: jest.fn(() => 1000),
-  getEntriesByType: jest.fn(() => []),
+  mark: jest.fn(),
+  measure: jest.fn(),
+  getEntriesByType: jest.fn(() => [] as PerformanceResourceTiming[]),
   memory: {
     usedJSHeapSize: 25 * 1024 * 1024, // 25MB
+    totalJSHeapSize: 100 * 1024 * 1024, // 100MB
+    jsHeapSizeLimit: 2 * 1024 * 1024 * 1024, // 2GB
   },
 };
 
@@ -21,11 +25,19 @@ Object.defineProperty(global, 'performance', {
   writable: true,
 });
 
-// Mock PerformanceObserver
-global.PerformanceObserver = jest.fn().mockImplementation(callback => ({
+// Mock PerformanceObserver with proper typing
+const MockPerformanceObserver = jest.fn().mockImplementation(callback => ({
   observe: jest.fn(),
   disconnect: jest.fn(),
 }));
+
+// Add supportedEntryTypes property
+Object.defineProperty(MockPerformanceObserver, 'supportedEntryTypes', {
+  value: ['navigation', 'resource', 'measure', 'mark'],
+  writable: false,
+});
+
+global.PerformanceObserver = MockPerformanceObserver as any;
 
 describe('Performance Monitoring', () => {
   beforeEach(() => {
@@ -149,10 +161,10 @@ describe('Performance Monitoring', () => {
 
       mockPerformance.now.mockReturnValueOnce(1000).mockReturnValueOnce(1030);
 
-      const result = measuredRender('arg1', 'arg2');
+      const result = measuredRender();
 
       expect(result).toBe('rendered');
-      expect(mockRenderFn).toHaveBeenCalledWith('arg1', 'arg2');
+      expect(mockRenderFn).toHaveBeenCalledWith();
 
       const metric = monitor.getMetric('TestComponent-render');
       expect(metric).toBeDefined();
@@ -163,20 +175,22 @@ describe('Performance Monitoring', () => {
 
   describe('measureResourceLoading', () => {
     it('measures resource loading performance', () => {
-      const mockResources = [
+      const mockResources: Partial<PerformanceResourceTiming>[] = [
         {
           name: 'https://example.com/script.js',
           startTime: 100,
           responseEnd: 600,
-        },
+        } as PerformanceResourceTiming,
         {
           name: 'https://example.com/style.css',
           startTime: 200,
           responseEnd: 400,
-        },
+        } as PerformanceResourceTiming,
       ];
 
-      mockPerformance.getEntriesByType.mockReturnValue(mockResources);
+      mockPerformance.getEntriesByType.mockReturnValue(
+        mockResources as PerformanceResourceTiming[]
+      );
 
       measureResourceLoading();
 
