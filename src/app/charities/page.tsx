@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -12,19 +12,30 @@ import {
   X,
   ChevronDown,
   Loader2,
+  RefreshCw,
+  TrendingUp,
 } from 'lucide-react';
 import { Button, Card, Input } from '@/components/ui';
 import { CharityCard } from '@/components/charities/CharityCard';
 import { CharityImpactModal } from '@/components/charities/CharityImpactModal';
 import { Header } from '@/components/layout/Header';
-import {
-  charities,
-  getCharityStats,
-  searchCharities,
-  getCategoryDisplayName,
-} from '@/data/charities';
+import { useCharityStore } from '@/stores/useCharityStore';
 import { Charity, CharityCategory } from '@/types';
 import { cn } from '@/lib/utils';
+
+// Utility function for category display names
+const getCategoryDisplayName = (category: CharityCategory): string => {
+  const categoryNames: Record<CharityCategory, string> = {
+    disabled_veterans: 'Disabled Veterans',
+    military_families: 'Military Families',
+    veteran_housing: 'Veteran Housing',
+    mental_health: 'Mental Health',
+    education: 'Education',
+    employment: 'Employment',
+    general_support: 'General Support',
+  };
+  return categoryNames[category];
+};
 
 const categories: CharityCategory[] = [
   'disabled_veterans',
@@ -37,76 +48,173 @@ const categories: CharityCategory[] = [
 ];
 
 export default function CharitiesPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<
-    CharityCategory | 'all'
-  >('all');
-  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+  const {
+    charities,
+    isLoading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    fetchCharities,
+    loadMoreCharities,
+    hasMore,
+    getFilteredCharities,
+    categoryFilter,
+    verificationFilter,
+    setCategoryFilter,
+    setVerificationFilter,
+    resetFilters,
+    totalCount,
+  } = useCharityStore();
+
   const [selectedCharity, setSelectedCharity] = useState<Charity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [searchError, setSearchError] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
-  const stats = getCharityStats();
+  // Get filtered charities
+  const filteredCharities = getFilteredCharities();
 
-  // Debounced search to improve performance
-  const debouncedSearch = useCallback(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
-  }, []);
-
-  // Filter charities based on search, category, and featured status
-  const filteredCharities = useMemo(() => {
-    let result = charities;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      result = searchCharities(searchQuery);
+  // Memoized statistics calculation
+  const stats = useMemo(() => {
+    if (!filteredCharities.length) {
+      return {
+        totalVeteransServed: 0,
+        totalFundingDistributed: 0,
+        categoriesSupported: 0,
+      };
     }
 
-    // Apply category filter
-    if (selectedCategory !== 'all') {
-      result = result.filter(charity => charity.category === selectedCategory);
-    }
+    return {
+      totalVeteransServed: filteredCharities.reduce(
+        (sum: number, charity: Charity) =>
+          sum + charity.impactMetrics.veteransServed,
+        0
+      ),
+      totalFundingDistributed: filteredCharities.reduce(
+        (sum: number, charity: Charity) =>
+          sum + charity.impactMetrics.fundingReceived,
+        0
+      ),
+      categoriesSupported: new Set(
+        filteredCharities.map((c: Charity) => c.category)
+      ).size,
+    };
+  }, [filteredCharities]);
 
-    // Apply featured filter
-    if (showFeaturedOnly) {
-      result = result.filter(charity => charity.featured);
-    }
-
-    return result;
-  }, [searchQuery, selectedCategory, showFeaturedOnly]);
-
-  const handleViewImpact = (charity: Charity) => {
+  // Memoized event handlers
+  const handleViewImpact = useCallback((charity: Charity) => {
     setSelectedCharity(charity);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedCharity(null);
-  };
+  }, []);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    debouncedSearch();
-  };
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
 
-  const clearFilters = () => {
+      // Clear previous search error
+      setSearchError('');
+
+      // Basic input validation
+      if (value.length > 100) {
+        setSearchError('Search query is too long (max 100 characters)');
+        return;
+      }
+
+      // Prevent potential XSS in search
+      const sanitizedValue = value.replace(/<[^>]*>/g, '').trim();
+      setSearchQuery(sanitizedValue);
+    },
+    [setSearchQuery]
+  );
+
+  const clearSearch = useCallback(() => {
+    setLocalSearchQuery('');
     setSearchQuery('');
-    setSelectedCategory('all');
-    setShowFeaturedOnly(false);
-  };
+    setSearchError('');
+  }, [setSearchQuery]);
+
+  // Enhanced error handling with retry logic
+  const handleRetry = useCallback(async () => {
+    if (retryCount < maxRetries) {
+      setRetryCount(prev => prev + 1);
+      try {
+        await fetchCharities(true);
+      } catch (err) {
+        console.error('Retry failed:', err);
+      }
+    }
+  }, [retryCount, maxRetries, fetchCharities]);
+
+  useEffect(() => {
+    const initializeCharities = async () => {
+      try {
+        await fetchCharities(true);
+        setRetryCount(0); // Reset retry count on success
+      } catch (err) {
+        console.error('Failed to load charities:', err);
+      }
+    };
+
+    if (charities.length === 0) {
+      initializeCharities();
+    }
+  }, [fetchCharities, charities.length]);
+
+  // Error state with retry option
+  if (error && !charities.length) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+              <h2 className="text-lg font-semibold text-red-800 mb-2">
+                Unable to Load Charities
+              </h2>
+              <p className="text-red-600 mb-4">
+                {error || 'An unexpected error occurred'}
+              </p>
+              {retryCount < maxRetries && (
+                <button
+                  onClick={handleRetry}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Retry ({retryCount + 1}/{maxRetries})
+                </button>
+              )}
+              {retryCount >= maxRetries && (
+                <p className="text-sm text-red-500">
+                  Please refresh the page or try again later.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const hasActiveFilters =
-    searchQuery || selectedCategory !== 'all' || showFeaturedOnly;
+    searchQuery || categoryFilter !== 'all' || verificationFilter !== 'all';
+
+  // Infinite scroll handler
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !isLoading && !searchQuery) {
+      loadMoreCharities();
+    }
+  }, [hasMore, isLoading, searchQuery, loadMoreCharities]);
 
   return (
     <div className="min-h-screen landing-page-flag">
       <Header />
+
       {/* Hero Section with American Flag Background */}
       <section className="relative py-20 hero-section">
         <div className="absolute inset-0 bg-backgroundDark/60" />
@@ -188,14 +296,14 @@ export default function CharitiesPage() {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-textSecondary" />
               <Input
                 type="text"
-                placeholder="Search charities by name, mission, or tags..."
-                value={searchQuery}
+                placeholder="Search charities by name or description..."
+                value={localSearchQuery}
                 onChange={handleSearchChange}
                 className="pl-12 pr-10 py-3 bg-backgroundLight/80 border-patriotBlue/30 focus:border-patriotBlue focus:ring-2 focus:ring-patriotBlue/20 text-patriotWhite placeholder:text-textSecondary"
               />
-              {searchQuery && (
+              {localSearchQuery && (
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={clearSearch}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-textSecondary hover:text-patriotWhite transition-colors"
                 >
                   <X className="w-4 h-4" />
@@ -223,9 +331,9 @@ export default function CharitiesPage() {
                   <div className="flex items-center space-x-2">
                     <Filter className="w-4 h-4 text-textSecondary" />
                     <span className="text-sm font-medium">
-                      {selectedCategory === 'all'
+                      {categoryFilter === 'all'
                         ? 'All Categories'
-                        : getCategoryDisplayName(selectedCategory)}
+                        : getCategoryDisplayName(categoryFilter)}
                     </span>
                   </div>
                   <ChevronDown
@@ -248,12 +356,12 @@ export default function CharitiesPage() {
                       <div className="py-2">
                         <button
                           onClick={() => {
-                            setSelectedCategory('all');
+                            setCategoryFilter('all');
                             setIsDropdownOpen(false);
                           }}
                           className={cn(
                             'w-full text-left px-4 py-2 text-sm hover:bg-patriotBlue/20 transition-colors',
-                            selectedCategory === 'all'
+                            categoryFilter === 'all'
                               ? 'bg-patriotBlue/30 text-patriotWhite'
                               : 'text-textSecondary hover:text-patriotWhite'
                           )}
@@ -264,12 +372,12 @@ export default function CharitiesPage() {
                           <button
                             key={category}
                             onClick={() => {
-                              setSelectedCategory(category);
+                              setCategoryFilter(category);
                               setIsDropdownOpen(false);
                             }}
                             className={cn(
                               'w-full text-left px-4 py-2 text-sm hover:bg-patriotBlue/20 transition-colors',
-                              selectedCategory === category
+                              categoryFilter === category
                                 ? 'bg-patriotBlue/30 text-patriotWhite'
                                 : 'text-textSecondary hover:text-patriotWhite'
                             )}
@@ -283,20 +391,22 @@ export default function CharitiesPage() {
                 </AnimatePresence>
               </div>
 
-              {/* Enhanced Featured Toggle */}
-              <Button
-                variant={showFeaturedOnly ? 'primary' : 'secondary'}
-                onClick={() => setShowFeaturedOnly(!showFeaturedOnly)}
-                className="flex items-center justify-center px-4 py-3"
+              {/* Verification Filter */}
+              <select
+                value={verificationFilter}
+                onChange={e => setVerificationFilter(e.target.value as any)}
+                className="px-4 py-3 bg-backgroundLight border border-patriotBlue/30 rounded-lg text-patriotWhite focus:border-patriotBlue focus:ring-2 focus:ring-patriotBlue/20 text-sm"
               >
-                <span className="font-medium">Featured Only</span>
-              </Button>
+                <option value="all">All Status</option>
+                <option value="verified">Verified</option>
+                <option value="pending">Pending</option>
+              </select>
 
               {/* Clear Filters */}
               {hasActiveFilters && (
                 <Button
+                  onClick={resetFilters}
                   variant="ghost"
-                  onClick={clearFilters}
                   className="flex items-center space-x-2 px-4 py-3 text-textSecondary hover:text-patriotWhite"
                 >
                   <X className="w-4 h-4" />
@@ -306,7 +416,7 @@ export default function CharitiesPage() {
             </div>
           </div>
 
-          {/* Enhanced Results Count */}
+          {/* Results Count */}
           <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="text-textSecondary">
               Showing{' '}
@@ -315,7 +425,7 @@ export default function CharitiesPage() {
               </span>{' '}
               of{' '}
               <span className="text-patriotWhite font-semibold">
-                {charities.length}
+                {totalCount}
               </span>{' '}
               charities
               {hasActiveFilters && (
@@ -335,14 +445,16 @@ export default function CharitiesPage() {
                       Search: &quot;{searchQuery}&quot;
                     </span>
                   )}
-                  {selectedCategory !== 'all' && (
+                  {categoryFilter !== 'all' && (
                     <span className="px-2 py-1 bg-patriotRed/20 text-patriotRed rounded-full text-xs">
-                      {getCategoryDisplayName(selectedCategory)}
+                      {getCategoryDisplayName(categoryFilter)}
                     </span>
                   )}
-                  {showFeaturedOnly && (
+                  {verificationFilter !== 'all' && (
                     <span className="px-2 py-1 bg-starGold/20 text-starGold rounded-full text-xs">
-                      Featured
+                      {verificationFilter === 'verified'
+                        ? 'Verified'
+                        : 'Pending'}
                     </span>
                   )}
                 </div>
@@ -355,7 +467,19 @@ export default function CharitiesPage() {
       {/* Enhanced Charities Grid */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {filteredCharities.length === 0 ? (
+          {isLoading && charities.length === 0 ? (
+            // Loading skeleton
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="p-6 animate-pulse">
+                  <div className="h-16 w-16 bg-backgroundAccent rounded-lg mb-4" />
+                  <div className="h-6 bg-backgroundAccent rounded mb-2" />
+                  <div className="h-4 bg-backgroundAccent rounded mb-4" />
+                  <div className="h-20 bg-backgroundAccent rounded" />
+                </Card>
+              ))}
+            </div>
+          ) : filteredCharities.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -371,41 +495,65 @@ export default function CharitiesPage() {
                   : "We're working on adding more verified charities to our directory."}
               </p>
               {hasActiveFilters && (
-                <Button onClick={clearFilters} variant="outline">
+                <Button onClick={resetFilters} variant="outline">
                   Clear All Filters
                 </Button>
               )}
             </motion.div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
-            >
-              <AnimatePresence>
-                {filteredCharities.map((charity, index) => (
-                  <motion.div
-                    key={charity.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{
-                      duration: 0.4,
-                      delay: index * 0.1,
-                      layout: { duration: 0.3 },
-                    }}
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
+              >
+                <AnimatePresence>
+                  {filteredCharities.map((charity, index) => (
+                    <motion.div
+                      key={charity.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{
+                        duration: 0.4,
+                        delay: index * 0.1,
+                        layout: { duration: 0.3 },
+                      }}
+                    >
+                      <CharityCard
+                        charity={charity}
+                        onViewImpact={handleViewImpact}
+                        className="h-full"
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+
+              {/* Load More Button */}
+              {hasMore && !searchQuery && (
+                <div className="text-center mt-12">
+                  <Button
+                    onClick={handleLoadMore}
+                    disabled={isLoading}
+                    variant="outline"
+                    size="lg"
+                    className="border-patriotBlue/30 text-patriotBlue hover:bg-patriotBlue/20"
                   >
-                    <CharityCard
-                      charity={charity}
-                      onViewImpact={handleViewImpact}
-                      className="h-full"
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Loading More...
+                      </>
+                    ) : (
+                      'Load More Charities'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

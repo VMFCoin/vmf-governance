@@ -19,27 +19,26 @@ import {
 } from 'lucide-react';
 import { Charity } from '@/types';
 import { Button, Card } from '@/components/ui';
-import { getCategoryDisplayName } from '@/data/charities';
+
+// Utility function for category display names
+const getCategoryDisplayName = (category: string): string => {
+  const categoryNames: Record<string, string> = {
+    disabled_veterans: 'Disabled Veterans',
+    military_families: 'Military Families',
+    veteran_housing: 'Veteran Housing',
+    mental_health: 'Mental Health',
+    education: 'Education',
+    employment: 'Employment',
+    general_support: 'General Support',
+  };
+  return categoryNames[category] || category;
+};
 
 interface CharityImpactModalProps {
   charity: Charity | null;
   isOpen: boolean;
   onClose: () => void;
 }
-
-// Image mapping for charity logos (same as CharityCard)
-const getCharityImagePath = (charityId: string): string => {
-  const imageMap: Record<string, string> = {
-    'patriots-promise': '/images/PatriotsPromise.jpeg',
-    'honor-her-foundation': '/images/HonorHer.jpg',
-    'holy-family-village': '/images/HolyFamilyVillage.jpeg',
-    'veterans-in-need-project': '/images/VeteransInNeedProject.jpeg',
-    'victory-for-veterans': '/images/VictoryForVeterans.jpeg',
-    'camp-cowboy': '/images/CampCowboy.jpeg',
-  };
-
-  return imageMap[charityId] || '/images/charities/default-charity.svg';
-};
 
 export const CharityImpactModal: React.FC<CharityImpactModalProps> = ({
   charity,
@@ -72,7 +71,8 @@ export const CharityImpactModal: React.FC<CharityImpactModalProps> = ({
     }).format(date);
   };
 
-  const imagePath = getCharityImagePath(charity.id);
+  // Use the actual logo URL from Supabase data, with fallback to default
+  const imagePath = charity.logo || '/images/charities/default-charity.svg';
 
   return (
     <AnimatePresence>

@@ -12,6 +12,12 @@ export interface CharityState {
   isLoading: boolean;
   error: string | null;
 
+  // Pagination
+  currentPage: number;
+  totalCount: number;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+
   // UI State
   selectedCharity: Charity | null;
   isSubmitting: boolean;
@@ -21,22 +27,26 @@ export interface CharityState {
   sortBy: 'name' | 'established' | 'impact';
 
   // Actions
-  fetchCharities: () => Promise<void>;
+  fetchCharities: (reset?: boolean) => Promise<void>;
+  loadMoreCharities: () => Promise<void>;
+  searchCharities: (query: string) => Promise<void>;
   addCharity: (charity: {
     name: string;
-    website: string;
-    logo: string;
-    mission: string;
     description: string;
+    website_url: string;
+    logo_url: string;
+    contact_email: string;
+    charity_address?: string;
   }) => Promise<Charity>;
   updateCharity: (
     id: string,
     updates: {
       name?: string;
-      website?: string;
-      logo?: string;
-      mission?: string;
       description?: string;
+      website_url?: string;
+      logo_url?: string;
+      contact_email?: string;
+      charity_address?: string;
     }
   ) => Promise<void>;
   deleteCharity: (id: string) => Promise<void>;
@@ -55,6 +65,7 @@ export interface CharityState {
   ) => void;
   setSortBy: (sort: 'name' | 'established' | 'impact') => void;
   clearError: () => void;
+  resetFilters: () => void;
 
   // Computed getters
   getFilteredCharities: () => Charity[];
@@ -72,6 +83,10 @@ export const useCharityStore = create<CharityState>()(
       pendingSubmissions: [],
       isLoading: false,
       error: null,
+      currentPage: 1,
+      totalCount: 0,
+      hasMore: true,
+      isLoadingMore: false,
       selectedCharity: null,
       isSubmitting: false,
       searchQuery: '',
@@ -79,18 +94,75 @@ export const useCharityStore = create<CharityState>()(
       verificationFilter: 'all',
       sortBy: 'name',
 
-      // Actions - Updated to use Supabase
-      fetchCharities: async () => {
-        set({ isLoading: true, error: null });
+      // Actions - Updated to use Supabase with pagination
+      fetchCharities: async (reset = true) => {
+        const state = get();
+        const page = reset ? 1 : state.currentPage;
+
+        set({
+          isLoading: reset,
+          isLoadingMore: !reset,
+          error: null,
+        });
+
         try {
-          const charities = await charityService.getAllCharities();
-          set({ charities, isLoading: false });
+          const result = await charityService.getAllCharities(page, 20);
+
+          console.log('Fetched charities:', result);
+
+          set(prevState => ({
+            charities: reset
+              ? result.charities
+              : [...prevState.charities, ...result.charities],
+            totalCount: result.totalCount,
+            hasMore: result.hasMore,
+            currentPage: page,
+            isLoading: false,
+            isLoadingMore: false,
+          }));
         } catch (error) {
           set({
             error:
               error instanceof Error
                 ? error.message
                 : 'Failed to fetch charities',
+            isLoading: false,
+            isLoadingMore: false,
+          });
+        }
+      },
+
+      loadMoreCharities: async () => {
+        const state = get();
+        if (!state.hasMore || state.isLoadingMore) return;
+
+        const nextPage = state.currentPage + 1;
+        set({ currentPage: nextPage });
+        await get().fetchCharities(false);
+      },
+
+      searchCharities: async (query: string) => {
+        set({ isLoading: true, error: null, searchQuery: query });
+
+        try {
+          if (query.trim()) {
+            const result = await charityService.searchCharities(query, 1, 20);
+            set({
+              charities: result.charities,
+              totalCount: result.totalCount,
+              hasMore: result.hasMore,
+              currentPage: 1,
+              isLoading: false,
+            });
+          } else {
+            await get().fetchCharities(true);
+          }
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to search charities',
             isLoading: false,
           });
         }
@@ -102,6 +174,7 @@ export const useCharityStore = create<CharityState>()(
           const newCharity = await charityService.createCharity(charityData);
           set(state => ({
             charities: [newCharity, ...state.charities],
+            totalCount: state.totalCount + 1,
             isLoading: false,
           }));
           return newCharity;
@@ -146,6 +219,7 @@ export const useCharityStore = create<CharityState>()(
           await charityService.deleteCharity(id);
           set(state => ({
             charities: state.charities.filter(c => c.id !== id),
+            totalCount: Math.max(0, state.totalCount - 1),
             isLoading: false,
           }));
         } catch (error) {
@@ -178,17 +252,15 @@ export const useCharityStore = create<CharityState>()(
       submitCharityForDirectory: async (charityData: CharitySubmission) => {
         set({ isSubmitting: true });
         try {
-          // For now, we'll just add it directly to the directory
-          // In the future, this could create a charity directory proposal
           await get().addCharity({
             name: charityData.name,
-            website: charityData.website,
-            logo: '/images/charities/default-charity.svg', // Default logo
-            mission: charityData.missionStatement,
             description: charityData.description,
+            website_url: charityData.website,
+            logo_url: '/images/charities/default-charity.svg',
+            contact_email: charityData.contactEmail,
+            charity_address: `${charityData.address.street}, ${charityData.address.city}, ${charityData.address.state}`,
           });
 
-          // Add to pending submissions for tracking
           set(state => ({
             pendingSubmissions: [...state.pendingSubmissions, charityData],
           }));
@@ -202,7 +274,11 @@ export const useCharityStore = create<CharityState>()(
       getPendingSubmissions: () => get().pendingSubmissions,
 
       // Filter actions
-      setSearchQuery: (query: string) => set({ searchQuery: query }),
+      setSearchQuery: (query: string) => {
+        set({ searchQuery: query });
+        get().searchCharities(query);
+      },
+
       setCategoryFilter: (category: CharityCategory | 'all') =>
         set({ categoryFilter: category }),
       setVerificationFilter: (
@@ -212,37 +288,30 @@ export const useCharityStore = create<CharityState>()(
         set({ sortBy: sort }),
       clearError: () => set({ error: null }),
 
-      // Computed getters (using hardcoded values for complex metadata)
+      resetFilters: () => {
+        set({
+          searchQuery: '',
+          categoryFilter: 'all',
+          verificationFilter: 'all',
+          sortBy: 'name',
+        });
+        get().fetchCharities(true);
+      },
+
+      // Computed getters (client-side filtering for non-search filters)
       getFilteredCharities: () => {
-        const {
-          charities,
-          searchQuery,
-          categoryFilter,
-          verificationFilter,
-          sortBy,
-        } = get();
+        const { charities, categoryFilter, verificationFilter, sortBy } = get();
 
         let filtered = charities;
 
-        // Search filter
-        if (searchQuery) {
-          filtered = filtered.filter(
-            charity =>
-              charity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              charity.description
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase())
-          );
-        }
-
-        // Category filter (using hardcoded category)
+        // Category filter
         if (categoryFilter !== 'all') {
           filtered = filtered.filter(
             charity => charity.category === categoryFilter
           );
         }
 
-        // Verification filter (using hardcoded verification)
+        // Verification filter
         if (verificationFilter !== 'all') {
           if (verificationFilter === 'verified') {
             filtered = filtered.filter(charity => charity.verification.is501c3);
@@ -291,8 +360,10 @@ export const useCharityStore = create<CharityState>()(
     {
       name: 'vmf-charity-store',
       partialize: state => ({
-        charities: state.charities,
         pendingSubmissions: state.pendingSubmissions,
+        categoryFilter: state.categoryFilter,
+        verificationFilter: state.verificationFilter,
+        sortBy: state.sortBy,
       }),
     }
   )

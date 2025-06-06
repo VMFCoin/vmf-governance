@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Simplified database type definitions
+// Updated database type definitions to match your actual schema
 export interface Database {
   public: {
     Tables: {
@@ -36,33 +36,34 @@ export interface Database {
       };
       charities: {
         Row: {
-          id: string;
-          name: string;
-          website: string;
-          logo_url: string;
-          mission: string;
-          description: string;
-          created_at: string;
-          updated_at: string;
+          id: number; // int8 primary key
+          charity_address: string | null; // varchar
+          created_at: string; // timestamp
+          name: string | null; // text
+          description: string | null; // text
+          website_url: string | null; // varchar
+          logo_url: string | null; // varchar
+          contact_email: string | null; // varchar
         };
         Insert: {
-          id?: string;
-          name: string;
-          website: string;
-          logo_url: string;
-          mission: string;
-          description: string;
+          id?: number;
+          charity_address?: string | null;
           created_at?: string;
-          updated_at?: string;
+          name?: string | null;
+          description?: string | null;
+          website_url?: string | null;
+          logo_url?: string | null;
+          contact_email?: string | null;
         };
         Update: {
-          id?: string;
-          name?: string;
-          website?: string;
-          logo_url?: string;
-          mission?: string;
-          description?: string;
-          updated_at?: string;
+          id?: number;
+          charity_address?: string | null;
+          created_at?: string;
+          name?: string | null;
+          description?: string | null;
+          website_url?: string | null;
+          logo_url?: string | null;
+          contact_email?: string | null;
         };
       };
     };
