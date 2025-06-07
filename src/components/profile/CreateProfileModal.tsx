@@ -284,7 +284,12 @@ export function CreateProfileModal({
                   value={name}
                   onChange={e => setName(e.target.value)}
                   placeholder="Enter your name (e.g., CryptoPatriot, VMF_Supporter)"
-                  className="w-full px-4 py-4 bg-backgroundBase border border-patriotBlue/30 rounded-xl text-patriotWhite placeholder-textSecondary focus:outline-none focus:ring-2 focus:ring-patriotBlue focus:border-patriotBlue transition-all duration-200 text-lg"
+                  className="w-full px-4 py-4 bg-slate-800 border border-patriotBlue/30 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-patriotBlue focus:border-patriotBlue transition-all duration-200 text-lg font-medium"
+                  style={{
+                    color: '#f1f5f9',
+                    backgroundColor: '#1e293b',
+                    caretColor: '#f1f5f9',
+                  }}
                   maxLength={50}
                   disabled={isSubmitting}
                 />

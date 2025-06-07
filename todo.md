@@ -1432,34 +1432,34 @@ textBase: '#E5E5E5'     /* Primary text */
 - [ ] Simulated transaction status and error handling
 - [ ] Integration with existing wallet connection
 
-#### **16.3 Voting Power Management**
+#### **16.3 Voting Power Management** ✅ COMPLETED
 
 **Enhanced Components:**
 
-- [ ] **Update `src/components/profile/ProfileCard.tsx` with voting power**
+- [x] **Update `src/components/profile/ProfileCard.tsx` with voting power** ✅
 
-  - Real-time voting power display (from mock service)
-  - Lock status and expiration
-  - Quick actions for lock management
+  - Real-time voting power display (from mock service) ✅
+  - Lock status and expiration ✅
+  - Quick actions for lock management ✅
 
-- [ ] **Create `src/components/voting/VotingPowerCard.tsx`**
+- [x] **Create `src/components/voting/VotingPowerCard.tsx`** ✅
 
-  - Detailed voting power breakdown
-  - Multiple lock management (simulated)
-  - Power allocation across gauges
+  - Detailed voting power breakdown ✅
+  - Multiple lock management (simulated) ✅
+  - Power allocation across gauges ✅
 
-- [ ] **Add voting power display to all voting interfaces**
-  - Available power for current vote (calculated from mock data)
-  - Power allocation preview
-  - Insufficient power warnings
+- [x] **Add voting power display to all voting interfaces** ✅
+  - Available power for current vote (calculated from mock data) ✅
+  - Power allocation preview ✅
+  - Insufficient power warnings ✅
 
 **Information Display:**
 
-- [ ] Current locked token balance (from mock service)
-- [ ] Voting power calculation and preview (mock formula)
-- [ ] Lock expiration date and duration
-- [ ] Warmup status and countdown (simulated)
-- [ ] Available voting power for current proposals
+- [x] Current locked token balance (from mock service) ✅
+- [x] Voting power calculation and preview (mock formula) ✅
+- [x] Lock expiration date and duration ✅
+- [x] Warmup status and countdown (simulated) ✅
+- [x] Available voting power for current proposals ✅
 
 #### **16.4 Automated Proposal Generation Enhancement**
 

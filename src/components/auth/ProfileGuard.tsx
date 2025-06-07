@@ -18,7 +18,7 @@ export function ProfileGuard({
   requireProfile = true,
   fallbackMessage = 'You need a profile to participate in governance activities.',
 }: ProfileGuardProps) {
-  const { isConnected } = useWalletStore();
+  const { isConnected, address } = useWalletStore();
   const { profile, isLoading, hasProfile } = useProfile();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -36,7 +36,8 @@ export function ProfileGuard({
   }
 
   // Check wallet connection
-  if (!isConnected) {
+  if (!hasProfile) {
+    console.log('address:', address);
     return (
       <Card className="p-8 text-center border-amber-200 bg-amber-50">
         <Wallet className="w-16 h-16 text-amber-600 mx-auto mb-4" />

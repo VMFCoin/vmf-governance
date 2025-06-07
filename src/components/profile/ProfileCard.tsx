@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Edit,
   Save,
@@ -21,6 +21,8 @@ import { Input } from '../ui/Input';
 import { AvatarUpload } from './AvatarUpload';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserProfileStore } from '@/stores/useUserProfileStore';
+import { useTokenLockStore } from '@/stores/useTokenLockStore';
+import { useWalletStore } from '@/stores/useWalletStore';
 import { cn } from '@/lib/utils';
 
 interface ProfileCardProps {
@@ -36,6 +38,15 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
 }) => {
   const { profile, isLoading } = useProfile();
   const { updateProfile, uploadAvatar, error } = useUserProfileStore();
+  const { address, isConnected } = useWalletStore();
+  const {
+    votingPowerBreakdown,
+    userLocks,
+    isLoading: isLoadingLocks,
+    fetchUserLocks,
+    getTotalVotingPower,
+  } = useTokenLockStore();
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(profile?.name || '');
   const [editedAvatarUrl, setEditedAvatarUrl] = useState(
@@ -43,6 +54,36 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   );
   const [validationError, setValidationError] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [totalVotingPower, setTotalVotingPower] = useState<bigint>(BigInt(0));
+
+  // Fetch voting power data when wallet is connected
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchUserLocks(address);
+      getTotalVotingPower(address).then(setTotalVotingPower);
+    }
+  }, [isConnected, address, fetchUserLocks, getTotalVotingPower]);
+
+  // Update total voting power when breakdown changes
+  useEffect(() => {
+    if (votingPowerBreakdown) {
+      setTotalVotingPower(votingPowerBreakdown.totalVotingPower);
+    }
+  }, [votingPowerBreakdown]);
+
+  // Format voting power for display
+  const formatVotingPower = (power: bigint): string => {
+    const powerNumber = Number(power) / 1e18;
+    if (powerNumber === 0) return '0';
+    if (powerNumber < 1) return powerNumber.toFixed(4);
+    return powerNumber.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  };
+
+  // Calculate lock status
+  const activeLocks = userLocks.filter(lock => lock.isWarmupComplete);
+  const warmingUpLocks = userLocks.filter(lock => !lock.isWarmupComplete);
+  const hasActiveLocks = activeLocks.length > 0;
+  const hasWarmingUpLocks = warmingUpLocks.length > 0;
 
   if (isLoading) {
     return (
@@ -298,9 +339,32 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               <Zap className="w-6 h-6 text-yellow-400" />
               Voting Power
             </h3>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-full border border-yellow-500/30">
-              <Lock className="w-4 h-4" />
-              <span className="text-sm font-semibold">Locked</span>
+            <div
+              className={cn(
+                'flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-semibold',
+                hasActiveLocks
+                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                  : hasWarmingUpLocks
+                    ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                    : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+              )}
+            >
+              {hasActiveLocks ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Active Locks</span>
+                </>
+              ) : hasWarmingUpLocks ? (
+                <>
+                  <Clock className="w-4 h-4" />
+                  <span>Warming Up</span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-4 h-4" />
+                  <span>No Locks</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -311,7 +375,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 <Award className="w-8 h-8 text-yellow-400" />
                 <div>
                   <div className="text-3xl font-bold text-yellow-400">
-                    0 VMF
+                    {isLoadingLocks ? (
+                      <div className="animate-pulse">Loading...</div>
+                    ) : (
+                      `${formatVotingPower(totalVotingPower)} VMF`
+                    )}
                   </div>
                   <div className="text-yellow-300/80 text-sm">
                     Current Voting Power
@@ -320,7 +388,51 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
               </div>
             </div>
 
-            {/* Power Description */}
+            {/* Lock Status Details */}
+            {(hasActiveLocks || hasWarmingUpLocks) && (
+              <div className="bg-patriotBlue/10 border border-patriotBlue/20 rounded-xl p-6">
+                <h4 className="text-lg font-semibold text-patriotWhite mb-4 flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-patriotBlue" />
+                  Your Token Locks
+                </h4>
+                <div className="space-y-3">
+                  {activeLocks.map((lock, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-patriotWhite font-medium">
+                          {formatVotingPower(lock.amount)} VMF
+                        </span>
+                      </div>
+                      <div className="text-sm text-patriotWhite/70">
+                        Active • {lock.lockDuration} days
+                      </div>
+                    </div>
+                  ))}
+                  {warmingUpLocks.map((lock, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                        <span className="text-patriotWhite font-medium">
+                          {formatVotingPower(lock.amount)} VMF
+                        </span>
+                      </div>
+                      <div className="text-sm text-patriotWhite/70">
+                        Warming Up • {lock.lockDuration} days
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Power Description or Call to Action */}
             <div className="bg-patriotBlue/10 border border-patriotBlue/20 rounded-xl p-6">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-patriotBlue/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -328,12 +440,14 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 </div>
                 <div>
                   <h4 className="text-lg font-semibold text-patriotWhite mb-2">
-                    Unlock Voting Power
+                    {hasActiveLocks
+                      ? 'Maximize Your Voting Power'
+                      : 'Unlock Voting Power'}
                   </h4>
                   <p className="text-patriotWhite/80 text-sm leading-relaxed mb-4">
-                    Lock your VMF tokens to gain voting power and participate in
-                    governance decisions. Your voting power increases with the
-                    amount and duration of locked tokens.
+                    {hasActiveLocks
+                      ? 'You have active token locks! Lock more tokens or extend your lock duration to increase your voting power further.'
+                      : 'Lock your VMF tokens to gain voting power and participate in governance decisions. Your voting power increases with the amount and duration of locked tokens.'}
                   </p>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-patriotWhite">
@@ -350,8 +464,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                     </div>
                   </div>
                   <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-patriotBlue text-white rounded-lg hover:bg-patriotBlue/80 transition-all duration-200 font-medium transform hover:scale-105">
-                    <Unlock className="w-4 h-4" />
-                    Lock Tokens
+                    <Lock className="w-4 h-4" />
+                    {hasActiveLocks ? 'Lock More Tokens' : 'Lock Tokens'}
                   </button>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Shield,
@@ -11,11 +11,15 @@ import {
   Building,
   Globe,
   Users,
+  Zap,
+  Award,
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { SimpleTooltip } from '@/components/ui/AnimatedTooltip';
 import { ProfileGuard } from '@/components/auth';
 import { useProposalStore } from '@/stores/useProposalStore';
+import { useTokenLockStore } from '@/stores/useTokenLockStore';
+import { useWalletStore } from '@/stores/useWalletStore';
 import { CharityDirectoryProposal } from '@/types';
 import { cn } from '@/lib/utils';
 import { fadeInVariants } from '@/lib/animations';
@@ -30,12 +34,46 @@ export function CharityDirectoryVoting({
   onVoteSubmitted,
 }: CharityDirectoryVotingProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalVotingPower, setTotalVotingPower] = useState<bigint>(BigInt(0));
+
   const { submitVote } = useProposalStore();
+  const { address, isConnected } = useWalletStore();
+  const {
+    votingPowerBreakdown,
+    isLoading: isLoadingVotingPower,
+    fetchUserLocks,
+    getTotalVotingPower,
+  } = useTokenLockStore();
+
+  // Fetch voting power data when wallet is connected
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchUserLocks(address);
+      getTotalVotingPower(address).then(setTotalVotingPower);
+    }
+  }, [isConnected, address, fetchUserLocks, getTotalVotingPower]);
+
+  // Update total voting power when breakdown changes
+  useEffect(() => {
+    if (votingPowerBreakdown) {
+      setTotalVotingPower(votingPowerBreakdown.totalVotingPower);
+    }
+  }, [votingPowerBreakdown]);
+
+  // Format voting power for display
+  const formatVotingPower = (power: bigint): string => {
+    const powerNumber = Number(power) / 1e18;
+    if (powerNumber === 0) return '0';
+    if (powerNumber < 1) return powerNumber.toFixed(4);
+    return powerNumber.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  };
 
   const handleVote = async (voteType: 'yes' | 'no' | 'abstain') => {
     setIsSubmitting(true);
     try {
-      await submitVote(proposal.id, voteType, 1);
+      // Use actual voting power instead of hardcoded 1
+      const votingPowerToUse = Number(totalVotingPower) / 1e18;
+      await submitVote(proposal.id, voteType, votingPowerToUse);
       onVoteSubmitted?.();
     } catch (error) {
       console.error('Failed to submit vote:', error);
@@ -84,6 +122,33 @@ export function CharityDirectoryVoting({
           <p className="text-textSecondary">
             Review the charity details and vote on directory inclusion
           </p>
+        </motion.div>
+
+        {/* Voting Power Display */}
+        <motion.div
+          className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4"
+          variants={fadeInVariants}
+          initial="initial"
+          animate="enter"
+          transition={{ delay: 0.05 }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Zap className="w-5 h-5 text-yellow-400 mr-2" />
+              <span className="font-semibold text-patriotWhite">
+                Your Voting Power:{' '}
+                {isLoadingVotingPower ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  `${formatVotingPower(totalVotingPower)} VMF`
+                )}
+              </span>
+            </div>
+            <div className="flex items-center text-sm text-textSecondary">
+              <Award className="w-4 h-4 mr-1" />
+              {totalVotingPower > 0 ? 'Ready to Vote' : 'Lock tokens to vote'}
+            </div>
+          </div>
         </motion.div>
 
         {/* Charity Details */}

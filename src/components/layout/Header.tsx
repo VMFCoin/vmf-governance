@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
 import { Star } from 'lucide-react';
 import { ConnectWallet } from '../wallet';
 import { NotificationPanel } from '../community';
@@ -13,6 +12,7 @@ import { mockNotifications } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { SecureConnectWallet } from '../wallet/SecureConnectWallet';
 import { HydrationBoundary } from './HydrationBoundary';
+import { useWalletSync } from '@/hooks/useWalletSync';
 
 interface HeaderProps {
   className?: string;
@@ -21,7 +21,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ className }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { isConnected, address } = useAccount();
+  const { isConnected, address } = useWalletSync();
   const [showCreateProfileModal, setShowCreateProfileModal] = useState(false);
 
   const navItems = [
