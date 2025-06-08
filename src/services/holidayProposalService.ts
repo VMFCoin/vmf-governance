@@ -314,3 +314,61 @@ export class HolidayProposalService {
 
 // Export singleton instance
 export const holidayProposalService = HolidayProposalService.getInstance();
+
+export const generateHolidayCharityProposal = async (
+  holidayId: string,
+  holidayName: string,
+  fundAmount: number
+): Promise<HolidayCharityProposal> => {
+  try {
+    // Get verified charities from charity store
+    const { useCharityStore } = await import('../stores/useCharityStore');
+    const charityStore = useCharityStore.getState();
+
+    // Ensure we have charity data
+    if (charityStore.charities.length === 0) {
+      await charityStore.fetchCharities();
+    }
+
+    // Get all verified charities
+    const verifiedCharities = charityStore.charities
+      .filter(charity => charity.verification.is501c3)
+      .map(charity => charity.id);
+
+    console.log(
+      `Found ${verifiedCharities.length} verified charities for ${holidayName}`
+    );
+
+    if (verifiedCharities.length < 2) {
+      console.warn(
+        `Not enough verified charities (${verifiedCharities.length}) for ${holidayName}`
+      );
+      throw new Error(`Insufficient verified charities for ${holidayName}`);
+    }
+
+    // Use proposal store to create the proposal
+    const { useProposalStore } = await import('../stores/useProposalStore');
+    const proposalStore = useProposalStore.getState();
+
+    // Create the proposal (this returns void)
+    await proposalStore.createHolidayCharityProposal(
+      holidayId,
+      verifiedCharities,
+      fundAmount
+    );
+
+    // Find and return the created proposal
+    const createdProposal = proposalStore.proposals
+      .filter(p => p.type === 'holiday_charity')
+      .find(p => (p as HolidayCharityProposal).holidayId === holidayId);
+
+    if (!createdProposal) {
+      throw new Error('Failed to create holiday charity proposal');
+    }
+
+    return createdProposal as HolidayCharityProposal;
+  } catch (error) {
+    console.error('Error generating holiday charity proposal:', error);
+    throw error;
+  }
+};

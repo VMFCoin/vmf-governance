@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Settings,
@@ -14,18 +14,36 @@ import {
   Activity,
   Shield,
   Target,
+  Edit,
+  MapPin,
+  Mail,
+  Globe,
+  Github,
+  Twitter,
+  Linkedin,
+  ExternalLink,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import { CreateProfileModal } from '@/components/profile/CreateProfileModal';
 import { useProfile } from '@/hooks/useProfile';
+import { useUserProfileStore } from '@/stores/useUserProfileStore';
 import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
   const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { profile, hasProfile, isConnected, isLoading } = useProfile();
+  const { profile, hasProfile, isConnected, isLoading, walletAddress } =
+    useProfile();
+  const { fetchProfileIfNeeded } = useUserProfileStore();
+
+  // Fetch profile when connected
+  useEffect(() => {
+    if (isConnected && walletAddress) {
+      fetchProfileIfNeeded(walletAddress);
+    }
+  }, [isConnected, walletAddress, fetchProfileIfNeeded]);
 
   // Redirect if not connected
   if (!isConnected && !isLoading) {

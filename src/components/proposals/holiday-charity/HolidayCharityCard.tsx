@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Clock,
@@ -15,11 +15,12 @@ import { Button } from '@/components/ui';
 import AnimatedCard from '@/components/ui/AnimatedCard';
 import { SimpleTooltip } from '@/components/ui/AnimatedTooltip';
 import { ProposalTypeIndicator } from '../shared/ProposalTypeIndicator';
-import { fadeInVariants, numberCountVariants } from '@/lib/animations';
-import { HolidayCharityProposal } from '@/types';
-import { useCharityStore } from '@/stores';
-import { useClientOnly, useClientStore } from '@/hooks/useClientOnly';
+import { fadeInVariants } from '@/lib/animations';
+import { HolidayCharityProposal, Charity } from '@/types';
+import { useCharityStore } from '@/stores/useCharityStore';
 import { cn } from '@/lib/utils';
+import { useWalletConnection } from '@/hooks/useWalletConnection';
+import { useProposalStore } from '@/stores/useProposalStore';
 
 interface HolidayCharityCardProps {
   proposal: HolidayCharityProposal;
@@ -30,18 +31,26 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
   proposal,
   className,
 }) => {
-  const isClient = useClientOnly();
+  const { address } = useWalletConnection();
+  const { getUserVote } = useProposalStore();
 
-  // Use the improved useClientStore hook for safe Zustand access
-  const charityStore = useClientStore(useCharityStore);
+  // Use Zustand selectors to prevent unnecessary re-renders
+  const charities = useCharityStore(state => state.charities);
+  const isLoading = useCharityStore(state => state.isLoading);
+  const fetchCharities = useCharityStore(state => state.fetchCharities);
+  const getCharityById = useCharityStore(state => state.getCharityById);
 
-  // Safe access to getCharityById with proper fallback
-  const getCharityById = (id: string) => {
-    if (!charityStore || !isClient) {
-      return null;
+  // Memoized function to fetch charities only when needed
+  const ensureCharitiesLoaded = useCallback(() => {
+    if (charities.length === 0 && !isLoading) {
+      fetchCharities();
     }
-    return charityStore.getCharityById(id);
-  };
+  }, [charities.length, isLoading, fetchCharities]);
+
+  // Call the function once to ensure data is loaded
+  React.useEffect(() => {
+    ensureCharitiesLoaded();
+  }, [ensureCharitiesLoaded]);
 
   const getStatusColor = (status: HolidayCharityProposal['status']) => {
     switch (status) {
@@ -58,14 +67,33 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
     }
   };
 
-  // Get charity information for display
-  const availableCharities = isClient
-    ? proposal.availableCharities.map(id => getCharityById(id)).filter(Boolean)
-    : proposal.availableCharities.map(id => ({
-        id,
+  // Optimized charity data computation
+  const availableCharities = useMemo(() => {
+    // If still loading or no charities available, show loading state
+    if (isLoading || charities.length === 0) {
+      return Array.from({ length: 6 }, (_, index) => ({
+        id: `loading-${index}`,
         name: 'Loading...',
-        category: 'general_support',
+        description: 'Loading charity data...',
+        category: 'general_support' as const,
       }));
+    }
+
+    // Map charity IDs to actual charity objects
+    const mappedCharities = proposal.availableCharities
+      .map(id => getCharityById(id))
+      .filter((charity): charity is Charity => charity !== undefined);
+
+    // If we have valid charities, return them; otherwise show loading
+    return mappedCharities.length > 0
+      ? mappedCharities
+      : Array.from({ length: 6 }, (_, index) => ({
+          id: `loading-${index}`,
+          name: 'Loading...',
+          description: 'Loading charity data...',
+          category: 'general_support' as const,
+        }));
+  }, [proposal.availableCharities, charities, isLoading, getCharityById]);
 
   const totalVotes =
     proposal.yesPercentage + proposal.noPercentage + proposal.abstainPercentage;
@@ -192,14 +220,14 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
           <div className="grid grid-cols-2 gap-2">
             {availableCharities.slice(0, 4).map((charity, index) => (
               <div
-                key={charity?.id || index}
+                key={charity?.id || `charity-${index}`}
                 className="bg-backgroundLight/50 border border-patriotBlue/30 rounded-lg p-2 text-xs"
               >
                 <div className="font-medium text-patriotWhite truncate">
                   {charity?.name || 'Unknown Charity'}
                 </div>
                 <div className="text-textSecondary truncate">
-                  {charity?.category.replace('_', ' ') || 'General'}
+                  {charity?.category?.replace('_', ' ') || 'General'}
                 </div>
               </div>
             ))}

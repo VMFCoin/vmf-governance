@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, UserPlus, Wallet } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { CreateProfileModal } from '@/components/profile/CreateProfileModal';
 import { useProfile } from '@/hooks/useProfile';
 import { useWalletStore } from '@/stores/useWalletStore';
+import { useUserProfileStore } from '@/stores/useUserProfileStore';
 
 interface ProfileGuardProps {
   children: React.ReactNode;
@@ -20,7 +21,15 @@ export function ProfileGuard({
 }: ProfileGuardProps) {
   const { isConnected, address } = useWalletStore();
   const { profile, isLoading, hasProfile } = useProfile();
+  const { fetchProfileIfNeeded } = useUserProfileStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Fetch profile when wallet is connected
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchProfileIfNeeded(address);
+    }
+  }, [isConnected, address, fetchProfileIfNeeded]);
 
   // Show loading state
   if (isLoading) {

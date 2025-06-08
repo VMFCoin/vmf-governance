@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Star } from 'lucide-react';
 import { ConnectWallet } from '../wallet';
-import { NotificationPanel } from '../community';
+import { NotificationCenter } from '../notifications/NotificationCenter';
 import { ProfileButton } from '../profile/ProfileButton';
 import { CreateProfileModal } from '../profile/CreateProfileModal';
-import { mockNotifications } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { SecureConnectWallet } from '../wallet/SecureConnectWallet';
 import { HydrationBoundary } from './HydrationBoundary';
@@ -31,22 +30,6 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     { href: '/community', label: 'Community' },
     { href: '/submit', label: 'Submit' },
   ];
-
-  const handleNotificationClick = (notification: any) => {
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
-    }
-  };
-
-  const handleMarkAsRead = (notificationId: string) => {
-    // In a real app, this would update the notification status
-    console.log('Marking notification as read:', notificationId);
-  };
-
-  const handleMarkAllAsRead = () => {
-    // In a real app, this would mark all notifications as read
-    console.log('Marking all notifications as read');
-  };
 
   const handleCreateProfile = () => {
     setShowCreateProfileModal(true);
@@ -99,12 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
             {/* Right Side - Notifications, Profile & Wallet */}
             <div className="flex items-center space-x-4">
-              <NotificationPanel
-                notifications={mockNotifications}
-                onNotificationClick={handleNotificationClick}
-                onMarkAsRead={handleMarkAsRead}
-                onMarkAllAsRead={handleMarkAllAsRead}
-              />
+              <NotificationCenter />
 
               {/* Profile Button - Shows when wallet is connected */}
               <ProfileButton

@@ -23,6 +23,7 @@ import {
 import { Header, Footer, Button, Card, Input, Dropdown } from '@/components';
 import { ProposalCardSkeleton } from '@/components/ui';
 import { TypeSpecificProposalCard } from '@/components/proposals';
+import { NotificationTester } from '@/components/notifications';
 import { mockProposals } from '@/data/mockData';
 import { Proposal, ProposalType } from '@/types';
 
@@ -407,6 +408,13 @@ export default function VotePage() {
             )}
           </div>
         </div>
+
+        {/* Development: Notification Tester */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-8">
+            <NotificationTester />
+          </div>
+        )}
 
         {/* Proposals Grid */}
         {filteredAndSortedProposals.length > 0 ? (

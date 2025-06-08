@@ -2,7 +2,7 @@
 
 import { useAccount } from 'wagmi';
 import { useUserProfileStore } from '@/stores/useUserProfileStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { UserProfile } from '@/lib/supabase';
 
 export interface UseProfileReturn {
@@ -24,6 +24,7 @@ export interface UseProfileReturn {
   }) => Promise<void>;
   uploadAvatar: (file: File) => Promise<string>;
   refreshProfile: () => Promise<void>;
+  fetchProfileIfNeeded: () => Promise<void>;
   clearError: () => void;
 
   // Validation
@@ -34,9 +35,7 @@ export interface UseProfileReturn {
 }
 
 export const useProfile = (): UseProfileReturn => {
-  const { address, isConnected } = useAccount();
-  const [hasCheckedProfile, setHasCheckedProfile] = useState(false);
-
+  const { address } = useAccount();
   const {
     profile,
     isLoading,
@@ -49,23 +48,8 @@ export const useProfile = (): UseProfileReturn => {
     hasProfile: storeHasProfile,
   } = useUserProfileStore();
 
-  // Auto-fetch profile when wallet connects
-  useEffect(() => {
-    console.log('useProfile useEffect triggered:', {
-      address,
-      isConnected,
-      hasCheckedProfile,
-      shouldFetch: address && !hasCheckedProfile,
-    });
-
-    // Use address presence for reliable connection detection (same as ProfileButton)
-    if (address && !hasCheckedProfile) {
-      console.log('Fetching profile for address:', address);
-      fetchProfile(address).finally(() => setHasCheckedProfile(true));
-    } else if (!address) {
-      setHasCheckedProfile(false);
-    }
-  }, [address, hasCheckedProfile, fetchProfile]);
+  // Remove all auto-fetch logic - let components decide when to fetch
+  // This prevents the infinite loop issue
 
   const createProfile = async (data: { name?: string; avatarUrl?: string }) => {
     if (!address) {
@@ -123,6 +107,13 @@ export const useProfile = (): UseProfileReturn => {
     }
   };
 
+  // Manual fetch function for components that need it
+  const fetchProfileIfNeeded = async () => {
+    if (address && !profile && !isLoading) {
+      await fetchProfile(address);
+    }
+  };
+
   const validateProfileData = (data: {
     name?: string;
   }): { isValid: boolean; errors: string[] } => {
@@ -164,6 +155,7 @@ export const useProfile = (): UseProfileReturn => {
     updateProfile,
     uploadAvatar,
     refreshProfile,
+    fetchProfileIfNeeded,
     clearError,
 
     // Validation

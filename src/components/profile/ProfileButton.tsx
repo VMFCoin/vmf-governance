@@ -29,7 +29,14 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
   const { address } = useAccount();
 
   // Use useProfile for profile-specific data only
-  const { profile, hasProfile } = useProfile();
+  const { profile, hasProfile, fetchProfileIfNeeded } = useProfile();
+
+  // Fetch profile when wallet connects
+  useEffect(() => {
+    if (address) {
+      fetchProfileIfNeeded();
+    }
+  }, [address, fetchProfileIfNeeded]);
 
   // Calculate dropdown position
   const calculateDropdownPosition = () => {
@@ -48,7 +55,7 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
       }
 
       // Adjust if dropdown would go off-screen on the right
-      if (left + dropdownWidth > viewportWidth - padding) {
+      if (left + dropdownWidth > viewportWidth - dropdownWidth - padding) {
         left = viewportWidth - dropdownWidth - padding;
       }
 
@@ -61,7 +68,6 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    console.log('profile', profile);
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
@@ -88,7 +94,7 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
         window.removeEventListener('resize', handlePositionUpdate);
       };
     }
-  }, [isDropdownOpen]);
+  }, [isDropdownOpen, profile]);
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;

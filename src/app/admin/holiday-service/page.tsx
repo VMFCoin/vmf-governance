@@ -37,6 +37,9 @@ export default function HolidayServiceAdminPage() {
 
   // Refresh status every 5 seconds
   useEffect(() => {
+    // Initialize client-side functionality
+    notificationService.initializeClient();
+
     const interval = setInterval(() => {
       setServiceStatus(holidayProposalService.getStatus());
       setNotifications(notificationService.getNotifications());

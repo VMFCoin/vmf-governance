@@ -10,9 +10,11 @@ interface UserProfileState {
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
+  lastFetchedAddress: string | null;
 
   // Actions
   fetchProfile: (walletAddress: string) => Promise<void>;
+  fetchProfileIfNeeded: (walletAddress: string) => Promise<void>;
   createProfile: (data: {
     walletAddress: string;
     name?: string;
@@ -40,18 +42,54 @@ export const useUserProfileStore = create<UserProfileState>()(
       profile: null,
       isLoading: false,
       error: null,
+      lastFetchedAddress: null,
 
       // Actions
       fetchProfile: async (walletAddress: string) => {
-        console.log('Store fetchProfile called with:', walletAddress);
+        const { profile, isLoading, lastFetchedAddress } = get();
+        // Prevent redundant fetches
+        if (isLoading) return;
+        if (profile && lastFetchedAddress === walletAddress.toLowerCase())
+          return;
+
         set({ isLoading: true, error: null });
-        console.log('Fetching profile for:', walletAddress);
         try {
           const profile = await profileService.getProfile(walletAddress);
-          console.log('Profile fetched successfully:', profile);
-          set({ profile, isLoading: false });
+          set({
+            profile,
+            isLoading: false,
+            lastFetchedAddress: walletAddress.toLowerCase(),
+          });
         } catch (error) {
           console.error('Error in store fetchProfile:', error);
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to fetch profile',
+            isLoading: false,
+          });
+        }
+      },
+
+      fetchProfileIfNeeded: async (walletAddress: string) => {
+        const { profile, isLoading, lastFetchedAddress } = get();
+
+        // Prevent redundant fetches
+        if (isLoading) return;
+        if (profile && lastFetchedAddress === walletAddress.toLowerCase())
+          return;
+
+        set({ isLoading: true, error: null });
+        try {
+          const profile = await profileService.getProfile(walletAddress);
+          set({
+            profile,
+            isLoading: false,
+            lastFetchedAddress: walletAddress.toLowerCase(),
+          });
+        } catch (error) {
+          console.error('Error in store fetchProfileIfNeeded:', error);
           set({
             error:
               error instanceof Error
@@ -128,7 +166,7 @@ export const useUserProfileStore = create<UserProfileState>()(
       },
 
       clearProfile: () => {
-        set({ profile: null, error: null });
+        set({ profile: null, error: null, lastFetchedAddress: null });
       },
 
       clearError: () => {
@@ -150,7 +188,10 @@ export const useUserProfileStore = create<UserProfileState>()(
     }),
     {
       name: 'vmf-user-profile-store',
-      partialize: state => ({ profile: state.profile }),
+      partialize: state => ({
+        profile: state.profile,
+        lastFetchedAddress: state.lastFetchedAddress,
+      }),
     }
   )
 );
