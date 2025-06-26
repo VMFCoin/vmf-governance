@@ -13,6 +13,8 @@ import {
   BarChart3,
   Target,
   Calendar,
+  AlertCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { VotingPowerBreakdown, TokenLock } from '@/types';
@@ -59,51 +61,79 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
     return `${value.toFixed(1)}%`;
   };
 
+  // Calculate warmup completion times
+  const getWarmupCompletionTime = (lock: TokenLock): Date => {
+    return new Date(lock.createdAt.getTime() + 3 * 24 * 60 * 60 * 1000); // 3 days
+  };
+
+  const getTimeUntilWarmup = (lock: TokenLock): string => {
+    if (lock.isWarmupComplete) return 'Complete';
+
+    const completionTime = getWarmupCompletionTime(lock);
+    const now = new Date();
+    const timeLeft = completionTime.getTime() - now.getTime();
+
+    if (timeLeft <= 0) return 'Complete';
+
+    const days = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+    const hours = Math.floor(
+      (timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)
+    );
+    const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
   const calculatePowerSources = (): PowerSource[] => {
-    const total = breakdown.totalVotingPower;
-    const totalNum = Number(total);
+    const activeLocks = userLocks.filter(lock => lock.isWarmupComplete);
+    const warmingUpLocks = userLocks.filter(lock => !lock.isWarmupComplete);
+
+    const activeVotingPower = activeLocks.reduce(
+      (sum, lock) => sum + lock.votingPower,
+      BigInt(0)
+    );
+
+    const warmingUpPower = warmingUpLocks.reduce(
+      (sum, lock) => sum + lock.votingPower,
+      BigInt(0)
+    );
+
+    const totalProjectedPower = activeVotingPower + warmingUpPower;
+    const totalNum = Number(totalProjectedPower);
 
     if (totalNum === 0) {
       return [];
     }
 
     const sources: PowerSource[] = [];
-    const activeLocks = userLocks.filter(lock => lock.isWarmupComplete);
-    const warmingUpLocks = userLocks.filter(lock => !lock.isWarmupComplete);
 
-    // Calculate active voting power
-    const activeVotingPower = activeLocks.reduce(
-      (sum, lock) => sum + lock.votingPower,
-      BigInt(0)
-    );
+    // Active voting power
     if (activeVotingPower > BigInt(0)) {
       const percentage = (Number(activeVotingPower) / totalNum) * 100;
       sources.push({
         id: 'active',
-        label: 'Active Locks',
+        label: 'Active Voting Power',
         amount: activeVotingPower,
         percentage,
         color: 'text-green-400',
-        icon: <Lock className="w-4 h-4" />,
-        description: 'Voting power from completed warmup locks',
+        icon: <CheckCircle className="w-4 h-4" />,
+        description: 'Available for voting now',
       });
     }
 
-    // Calculate warming up power
-    const warmingUpPower = warmingUpLocks.reduce(
-      (sum, lock) => sum + lock.votingPower,
-      BigInt(0)
-    );
+    // Warming up power
     if (warmingUpPower > BigInt(0)) {
       const percentage = (Number(warmingUpPower) / totalNum) * 100;
       sources.push({
         id: 'warming',
-        label: 'Warming Up',
+        label: 'Pending Voting Power',
         amount: warmingUpPower,
         percentage,
         color: 'text-orange-400',
         icon: <Clock className="w-4 h-4" />,
-        description: 'Future voting power from locks in warmup',
+        description: 'Completing warmup period',
       });
     }
 
@@ -171,6 +201,46 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
           )}
         </div>
 
+        {/* Warmup Notice */}
+        {warmingUpLocks.length > 0 && (
+          <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-orange-400 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-orange-400 mb-2">
+                  Warmup Period Active
+                </h4>
+                <p className="text-sm text-orange-300/80 mb-3">
+                  {warmingUpLocks.length} lock
+                  {warmingUpLocks.length > 1 ? 's' : ''} completing warmup
+                  period. Voting power will be available after 3 days from lock
+                  creation.
+                </p>
+                <div className="space-y-2">
+                  {warmingUpLocks.slice(0, 3).map(lock => (
+                    <div
+                      key={lock.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-orange-200">
+                        Lock #{lock.id} ({formatTokenAmount(lock.amount)} VMF)
+                      </span>
+                      <span className="text-orange-400 font-medium">
+                        {getTimeUntilWarmup(lock)} remaining
+                      </span>
+                    </div>
+                  ))}
+                  {warmingUpLocks.length > 3 && (
+                    <div className="text-sm text-orange-300/60">
+                      +{warmingUpLocks.length - 3} more locks warming up
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Timeframe Toggle */}
         <div className="flex bg-backgroundAccent rounded-lg p-1 mb-6">
           {[
@@ -206,7 +276,7 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
           </motion.div>
           <div className="text-patriotBlue font-medium">VMF Voting Power</div>
 
-          {selectedTimeframe === 'projected' && warmingUpLocks.length > 0 && (
+          {selectedTimeframe === 'current' && warmingUpLocks.length > 0 && (
             <div className="mt-3 text-sm text-orange-400">
               +
               {formatTokenAmount(
@@ -215,9 +285,17 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
                   BigInt(0)
                 )
               )}{' '}
-              when warmup completes
+              pending (warmup completing)
             </div>
           )}
+
+          {selectedTimeframe === 'projected' &&
+            currentPower === BigInt(0) &&
+            projectedPower > BigInt(0) && (
+              <div className="mt-3 text-sm text-orange-400">
+                All voting power currently in warmup period
+              </div>
+            )}
         </div>
 
         {/* Power Sources Breakdown */}
@@ -305,7 +383,7 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
                   {activeLocks.length > 0 && (
                     <div>
                       <h4 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
-                        <Lock className="w-4 h-4" />
+                        <CheckCircle className="w-4 h-4" />
                         Active Locks ({activeLocks.length})
                       </h4>
                       <div className="space-y-2">
@@ -314,20 +392,25 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
                             key={lock.id}
                             className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-lg"
                           >
-                            <div>
-                              <div className="font-medium text-patriotWhite text-sm">
-                                Lock #{lock.id}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center text-sm font-semibold">
+                                #{lock.id}
                               </div>
-                              <div className="text-xs text-textSecondary">
-                                Expires: {lock.expiresAt.toLocaleDateString()}
+                              <div>
+                                <div className="text-sm font-medium text-patriotWhite">
+                                  {formatTokenAmount(lock.amount)} VMF
+                                </div>
+                                <div className="text-xs text-textSecondary">
+                                  Expires: {lock.expiresAt.toLocaleDateString()}
+                                </div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold text-green-400">
+                              <div className="text-sm font-semibold text-green-400">
                                 {formatTokenAmount(lock.votingPower)}
                               </div>
                               <div className="text-xs text-textSecondary">
-                                {formatTokenAmount(lock.amount)} locked
+                                Voting Power
                               </div>
                             </div>
                           </div>
@@ -341,7 +424,7 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
                     <div>
                       <h4 className="text-sm font-semibold text-orange-400 mb-3 flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        Warming Up ({warmingUpLocks.length})
+                        Warming Up Locks ({warmingUpLocks.length})
                       </h4>
                       <div className="space-y-2">
                         {warmingUpLocks.map(lock => (
@@ -349,21 +432,25 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
                             key={lock.id}
                             className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg"
                           >
-                            <div>
-                              <div className="font-medium text-patriotWhite text-sm">
-                                Lock #{lock.id}
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center text-sm font-semibold">
+                                #{lock.id}
                               </div>
-                              <div className="text-xs text-textSecondary">
-                                Completes:{' '}
-                                {lock.warmupEndsAt?.toLocaleDateString()}
+                              <div>
+                                <div className="text-sm font-medium text-patriotWhite">
+                                  {formatTokenAmount(lock.amount)} VMF
+                                </div>
+                                <div className="text-xs text-orange-300">
+                                  Warmup: {getTimeUntilWarmup(lock)} remaining
+                                </div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="font-semibold text-orange-400">
+                              <div className="text-sm font-semibold text-orange-400">
                                 {formatTokenAmount(lock.votingPower)}
                               </div>
                               <div className="text-xs text-textSecondary">
-                                {formatTokenAmount(lock.amount)} locked
+                                Pending Power
                               </div>
                             </div>
                           </div>
@@ -376,8 +463,8 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
             </div>
           )}
 
-        {/* No Power State */}
-        {breakdown.totalVotingPower === BigInt(0) && (
+        {/* No Voting Power State */}
+        {userLocks.length === 0 && (
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-patriotBlue/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Info className="w-8 h-8 text-patriotBlue" />

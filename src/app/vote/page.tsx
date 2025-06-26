@@ -19,6 +19,8 @@ import {
   Code,
   Zap,
   Shield,
+  Lock,
+  LogOut,
 } from 'lucide-react';
 import { Header, Footer, Button, Card, Input, Dropdown } from '@/components';
 import { ProposalCardSkeleton } from '@/components/ui';
@@ -217,9 +219,35 @@ export default function VotePage() {
 
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-4xl font-display font-bold text-patriotWhite mb-4">
-            Governance Proposals
-          </h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-4xl font-display font-bold text-patriotWhite">
+              Governance Proposals
+            </h1>
+            <div className="flex items-center gap-3">
+              <Button
+                asChild
+                variant="outline"
+                size="md"
+                className="font-semibold"
+              >
+                <Link href="/token-locking">
+                  <Lock className="w-5 h-5 mr-2" />
+                  Token Locking Hub
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="md"
+                className="font-semibold"
+              >
+                <Link href="/voting/exit-queue">
+                  <LogOut className="w-5 h-5 mr-2" />
+                  Exit Queue
+                </Link>
+              </Button>
+            </div>
+          </div>
           <p className="text-xl text-textSecondary leading-relaxed">
             Vote on proposals that matter to the veteran community
           </p>
@@ -410,11 +438,11 @@ export default function VotePage() {
         </div>
 
         {/* Development: Notification Tester */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* {process.env.NODE_ENV === 'development' && (
           <div className="mb-8">
             <NotificationTester />
           </div>
-        )}
+        )} */}
 
         {/* Proposals Grid */}
         {filteredAndSortedProposals.length > 0 ? (

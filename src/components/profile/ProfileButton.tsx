@@ -38,35 +38,48 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
     }
   }, [address, fetchProfileIfNeeded]);
 
-  // Calculate dropdown position
+  // Enhanced dropdown position calculation with better mobile support
   const calculateDropdownPosition = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const dropdownWidth = window.innerWidth < 640 ? 240 : 256; // Smaller on mobile
       const viewportWidth = window.innerWidth;
-      const padding = 16; // Padding from screen edge
+      const viewportHeight = window.innerHeight;
+      const isMobile = viewportWidth < 640;
 
-      // Calculate left position, ensuring dropdown stays within viewport
+      // Responsive dropdown sizing
+      const dropdownWidth = isMobile ? Math.min(280, viewportWidth - 32) : 256;
+      const dropdownHeight = 200; // Approximate dropdown height
+      const padding = isMobile ? 16 : 20;
+
       let left = rect.right + window.scrollX - dropdownWidth;
+      let top = rect.bottom + window.scrollY + 8;
 
-      // Adjust if dropdown would go off-screen on the left
+      // Adjust horizontal position
       if (left < padding) {
         left = padding;
-      }
-
-      // Adjust if dropdown would go off-screen on the right
-      if (left + dropdownWidth > viewportWidth - dropdownWidth - padding) {
+      } else if (left + dropdownWidth > viewportWidth - padding) {
         left = viewportWidth - dropdownWidth - padding;
       }
 
+      // Adjust vertical position to prevent overflow
+      if (top + dropdownHeight > viewportHeight + window.scrollY - padding) {
+        // Show dropdown above button if there's not enough space below
+        top = rect.top + window.scrollY - dropdownHeight - 8;
+
+        // If still not enough space above, position at top of viewport
+        if (top < window.scrollY + padding) {
+          top = window.scrollY + padding;
+        }
+      }
+
       setDropdownPosition({
-        top: rect.bottom + window.scrollY + 8, // 8px gap
+        top: top,
         left: left,
       });
     }
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or on escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -79,19 +92,43 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
       }
     };
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsDropdownOpen(false);
+      }
+    };
+
     if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
       calculateDropdownPosition();
 
-      // Recalculate position on scroll/resize
-      const handlePositionUpdate = () => calculateDropdownPosition();
-      window.addEventListener('scroll', handlePositionUpdate);
+      // Recalculate position on scroll/resize with throttling
+      let timeoutId: NodeJS.Timeout;
+      const handlePositionUpdate = () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(calculateDropdownPosition, 16); // ~60fps
+      };
+
+      window.addEventListener('scroll', handlePositionUpdate, {
+        passive: true,
+      });
       window.addEventListener('resize', handlePositionUpdate);
+
+      // Prevent body scroll on mobile when dropdown is open
+      if (window.innerWidth < 640) {
+        document.body.style.overflow = 'hidden';
+      }
 
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleEscape);
         window.removeEventListener('scroll', handlePositionUpdate);
         window.removeEventListener('resize', handlePositionUpdate);
+        clearTimeout(timeoutId);
+
+        // Restore body scroll
+        document.body.style.overflow = 'unset';
       };
     }
   }, [isDropdownOpen, profile]);
@@ -126,120 +163,211 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
     return null;
   }
 
-  // Dropdown content to be rendered in portal
+  // Enhanced dropdown content with better mobile support
   const dropdownContent = isDropdownOpen && (
-    <div
-      ref={dropdownRef}
-      className="fixed w-60 sm:w-64 bg-backgroundLight border border-patriotBlue/30 rounded-lg shadow-2xl py-2"
-      style={{
-        top: dropdownPosition.top,
-        left: dropdownPosition.left,
-        zIndex: 9999, // Highest possible z-index
-        background:
-          'linear-gradient(135deg, rgba(27, 41, 81, 0.98) 0%, rgba(42, 59, 92, 0.95) 100%)',
-        backdropFilter: 'blur(12px)',
-        boxShadow:
-          '0 25px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(27, 41, 81, 0.3)',
-      }}
-    >
-      {/* Profile Section */}
-      <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-patriotBlue/30">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-backgroundBase flex items-center justify-center flex-shrink-0">
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
+    <>
+      {/* Mobile backdrop overlay */}
+      {window.innerWidth < 640 && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          style={{ zIndex: 9998 }}
+          onClick={() => setIsDropdownOpen(false)}
+        />
+      )}
+
+      <div
+        ref={dropdownRef}
+        className={cn(
+          'fixed bg-backgroundLight border border-patriotBlue/30 rounded-lg sm:rounded-xl shadow-2xl py-2',
+          'max-h-[80vh] overflow-y-auto',
+          // Responsive width
+          'w-[calc(100vw-2rem)] max-w-xs sm:w-64 sm:max-w-sm'
+        )}
+        style={{
+          top: dropdownPosition.top,
+          left: dropdownPosition.left,
+          zIndex: 9999,
+          background:
+            'linear-gradient(135deg, rgba(27, 41, 81, 0.98) 0%, rgba(42, 59, 92, 0.95) 100%)',
+          backdropFilter: 'blur(12px)',
+          boxShadow:
+            '0 25px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(27, 41, 81, 0.3)',
+        }}
+      >
+        {/* Enhanced Profile Section */}
+        <div className="px-3 sm:px-4 py-3 sm:py-4 border-b border-patriotBlue/30">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-backgroundBase flex items-center justify-center flex-shrink-0 border-2 border-patriotBlue/20">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-6 h-6 sm:w-7 sm:h-7 text-gray-400" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-patriotWhite text-sm sm:text-base truncate">
+                {hasProfile ? profile?.name || 'Anonymous' : 'No Profile'}
+              </div>
+              <div className="text-xs sm:text-sm text-textSecondary truncate mt-0.5">
+                {address ? formatAddress(address) : ''}
+              </div>
+              {/* Profile status indicator */}
+              <div className="mt-1">
+                {hasProfile ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-green-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    Profile Active
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs text-yellow-400">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                    Setup Required
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Menu Items */}
+        <div className="py-1">
+          {!hasProfile ? (
+            <button
+              onClick={handleCreateProfile}
+              className={cn(
+                'w-full px-3 sm:px-4 py-3 text-left text-sm sm:text-base',
+                'text-textBase hover:bg-backgroundAccent hover:text-patriotWhite',
+                'transition-all duration-200 flex items-center gap-3',
+                'active:bg-backgroundAccent/80', // Touch feedback
+                'focus:outline-none focus:bg-backgroundAccent/50'
+              )}
+            >
+              <div className="w-8 h-8 rounded-full bg-patriotBlue/20 flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 text-patriotBlue" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">Create Profile</div>
+                <div className="text-xs text-textSecondary truncate">
+                  Required for governance participation
+                </div>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={handleViewProfile}
+              className={cn(
+                'w-full px-3 sm:px-4 py-3 text-left text-sm sm:text-base',
+                'text-textBase hover:bg-backgroundAccent hover:text-patriotWhite',
+                'transition-all duration-200 flex items-center gap-3',
+                'active:bg-backgroundAccent/80', // Touch feedback
+                'focus:outline-none focus:bg-backgroundAccent/50'
+              )}
+            >
+              <div className="w-8 h-8 rounded-full bg-patriotBlue/20 flex items-center justify-center flex-shrink-0">
+                <Settings className="w-4 h-4 text-patriotBlue" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">Manage Profile</div>
+                <div className="text-xs text-textSecondary truncate">
+                  Edit your profile settings
+                </div>
+              </div>
+            </button>
+          )}
+
+          <button
+            onClick={handleDisconnect}
+            className={cn(
+              'w-full px-3 sm:px-4 py-3 text-left text-sm sm:text-base',
+              'text-patriotRed hover:bg-patriotRed/10 hover:text-patriotRed',
+              'transition-all duration-200 flex items-center gap-3',
+              'active:bg-patriotRed/20', // Touch feedback
+              'focus:outline-none focus:bg-patriotRed/10'
+            )}
+          >
+            <div className="w-8 h-8 rounded-full bg-patriotRed/20 flex items-center justify-center flex-shrink-0">
+              <LogOut className="w-4 h-4 text-patriotRed" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate">Disconnect Wallet</div>
+              <div className="text-xs text-textSecondary truncate">
+                Sign out of your account
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Enhanced Footer with governance info */}
+        <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-patriotBlue/30 bg-backgroundBase/30">
+          <div className="text-xs text-textSecondary text-center">
+            {hasProfile ? (
+              <div className="space-y-1">
+                <div className="text-green-400 font-medium">
+                  ✓ Ready for Governance
+                </div>
+                <div>You can now vote on proposals</div>
+              </div>
             ) : (
-              <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+              <div className="space-y-1">
+                <div className="text-yellow-400 font-medium">
+                  ⚠ Profile Required
+                </div>
+                <div>Create a profile to participate in voting</div>
+              </div>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-patriotWhite text-sm sm:text-base truncate">
-              {hasProfile ? profile?.name || 'Anonymous' : 'No Profile'}
-            </div>
-            <div className="text-xs sm:text-sm text-textSecondary truncate">
-              {address ? formatAddress(address) : ''}
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* Menu Items */}
-      <div className="py-1">
-        {!hasProfile ? (
-          <button
-            onClick={handleCreateProfile}
-            className="w-full px-3 sm:px-4 py-2 text-left text-sm text-textBase hover:bg-backgroundAccent hover:text-patriotWhite transition-colors duration-200 flex items-center gap-2"
-          >
-            <User className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">Create Profile</span>
-          </button>
-        ) : (
-          <button
-            onClick={handleViewProfile}
-            className="w-full px-3 sm:px-4 py-2 text-left text-sm text-textBase hover:bg-backgroundAccent hover:text-patriotWhite transition-colors duration-200 flex items-center gap-2"
-          >
-            <Settings className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">Manage Profile</span>
-          </button>
-        )}
-
-        <button
-          onClick={handleDisconnect}
-          className="w-full px-3 sm:px-4 py-2 text-left text-sm text-patriotRed hover:bg-patriotRed/10 transition-colors duration-200 flex items-center gap-2"
-        >
-          <LogOut className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate">Disconnect Wallet</span>
-        </button>
-      </div>
-
-      {/* Profile Status */}
-      <div className="px-3 sm:px-4 py-2 border-t border-patriotBlue/30">
-        <div className="text-xs text-textSecondary">
-          {hasProfile ? (
-            <span className="text-green-500">✓ Profile Active</span>
-          ) : (
-            <span className="text-yellow-500">
-              ⚠ Profile Required for Voting
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
+    </>
   );
 
   return (
     <>
       <div className={cn('relative', className)}>
-        {/* Profile Button */}
+        {/* Enhanced Profile Button */}
         <button
           ref={buttonRef}
           onClick={handleButtonClick}
           className={cn(
-            'flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200',
-            'bg-backgroundLight hover:bg-backgroundAccent border border-patriotBlue/30',
+            'flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl',
+            'transition-all duration-200 transform',
+            'bg-backgroundLight hover:bg-backgroundAccent active:bg-backgroundAccent/80',
+            'border border-patriotBlue/30 hover:border-patriotBlue/50',
             'text-textBase hover:text-patriotWhite',
-            'min-w-[40px] sm:min-w-[120px] lg:min-w-[160px]',
-            isDropdownOpen && 'bg-backgroundAccent'
+            'min-w-[44px] sm:min-w-[120px] lg:min-w-[160px]', // Touch-friendly minimum size
+            'hover:scale-105 active:scale-95', // Interactive scaling
+            'focus:outline-none focus:ring-2 focus:ring-patriotBlue/50',
+            isDropdownOpen &&
+              'bg-backgroundAccent border-patriotBlue/50 scale-105'
           )}
         >
-          {/* Avatar */}
-          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-backgroundBase flex items-center justify-center flex-shrink-0">
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <User className="w-3 h-3 sm:w-5 sm:h-5 text-gray-400" />
-            )}
+          {/* Enhanced Avatar with status indicator */}
+          <div className="relative flex-shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-backgroundBase flex items-center justify-center border border-patriotBlue/20">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+              )}
+            </div>
+            {/* Status dot */}
+            <div
+              className={cn(
+                'absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full border border-backgroundLight',
+                hasProfile ? 'bg-green-400' : 'bg-yellow-400'
+              )}
+            />
           </div>
 
-          {/* Profile Info - Hidden on mobile, shown on sm and up */}
+          {/* Profile Info - Enhanced responsive visibility */}
           <div className="hidden sm:block text-left flex-1 min-w-0">
             <div className="text-xs sm:text-sm font-medium truncate">
               {hasProfile ? profile?.name || 'Anonymous' : 'No Profile'}
@@ -249,11 +377,12 @@ export const ProfileButton: React.FC<ProfileButtonProps> = ({
             </div>
           </div>
 
-          {/* Dropdown Arrow */}
+          {/* Enhanced Dropdown Arrow */}
           <ChevronDown
             className={cn(
-              'w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 flex-shrink-0',
-              isDropdownOpen && 'rotate-180'
+              'w-3 h-3 sm:w-4 sm:h-4 transition-all duration-200 flex-shrink-0',
+              'text-textSecondary group-hover:text-patriotWhite',
+              isDropdownOpen && 'rotate-180 text-patriotBlue'
             )}
           />
         </button>

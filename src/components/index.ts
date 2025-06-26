@@ -15,3 +15,6 @@ export * from './wallet';
 
 // Community Components
 export * from './community';
+
+// Governance Components
+export * from './governance';

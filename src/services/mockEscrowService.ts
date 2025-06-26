@@ -210,6 +210,172 @@ export class MockEscrowService {
       this.locks.set(tokenId, lock);
     }
   }
+
+  /**
+   * Extend a lock's duration
+   */
+  async extendLock(
+    tokenId: number,
+    newEndTime: number,
+    owner: string
+  ): Promise<void> {
+    const lock = this.locks.get(tokenId);
+    if (!lock) {
+      throw new Error('Token not found');
+    }
+
+    if (lock.owner !== owner.toLowerCase()) {
+      throw new Error('Not the owner of this lock');
+    }
+
+    if (new Date() > lock.expiresAt) {
+      throw new Error('Cannot extend expired lock');
+    }
+
+    const newExpiresAt = new Date(newEndTime * 1000);
+    if (newExpiresAt <= lock.expiresAt) {
+      throw new Error('New end time must be later than current end time');
+    }
+
+    // Update lock
+    lock.expiresAt = newExpiresAt;
+    lock.lockDuration = Math.floor(
+      (newExpiresAt.getTime() - lock.createdAt.getTime()) / 1000
+    );
+    lock.votingPower = this.calculateVotingPower(
+      lock.amount,
+      lock.lockDuration
+    );
+
+    this.locks.set(tokenId, lock);
+  }
+
+  /**
+   * Increase a lock's amount
+   */
+  async increaseLockAmount(
+    tokenId: number,
+    additionalAmount: bigint,
+    owner: string
+  ): Promise<void> {
+    const lock = this.locks.get(tokenId);
+    if (!lock) {
+      throw new Error('Token not found');
+    }
+
+    if (lock.owner !== owner.toLowerCase()) {
+      throw new Error('Not the owner of this lock');
+    }
+
+    if (new Date() > lock.expiresAt) {
+      throw new Error('Cannot increase expired lock');
+    }
+
+    // Check allowance and transfer tokens
+    const allowance = await mockTokenService.getAllowance(
+      owner,
+      this.ESCROW_ADDRESS
+    );
+    if (allowance < additionalAmount) {
+      throw new Error('Insufficient allowance. Please approve tokens first.');
+    }
+
+    await mockTokenService.transfer(
+      owner,
+      this.ESCROW_ADDRESS,
+      additionalAmount
+    );
+
+    // Update lock
+    lock.amount += additionalAmount;
+    lock.votingPower = this.calculateVotingPower(
+      lock.amount,
+      lock.lockDuration
+    );
+
+    this.locks.set(tokenId, lock);
+  }
+
+  /**
+   * Merge two locks
+   */
+  async mergeLocks(
+    fromTokenId: number,
+    toTokenId: number,
+    owner: string
+  ): Promise<void> {
+    const fromLock = this.locks.get(fromTokenId);
+    const toLock = this.locks.get(toTokenId);
+
+    if (!fromLock || !toLock) {
+      throw new Error('One or both tokens not found');
+    }
+
+    if (
+      fromLock.owner !== owner.toLowerCase() ||
+      toLock.owner !== owner.toLowerCase()
+    ) {
+      throw new Error('Not the owner of one or both locks');
+    }
+
+    if (new Date() > fromLock.expiresAt || new Date() > toLock.expiresAt) {
+      throw new Error('Cannot merge expired locks');
+    }
+
+    // Merge into the lock with the later expiration
+    const targetLock =
+      fromLock.expiresAt > toLock.expiresAt ? fromLock : toLock;
+    const sourceLock =
+      fromLock.expiresAt > toLock.expiresAt ? toLock : fromLock;
+    const targetTokenId = targetLock.id;
+    const sourceTokenId = sourceLock.id;
+
+    // Update target lock
+    targetLock.amount += sourceLock.amount;
+    targetLock.votingPower = this.calculateVotingPower(
+      targetLock.amount,
+      targetLock.lockDuration
+    );
+
+    // Remove source lock
+    this.locks.delete(sourceTokenId);
+
+    // Update user's token list
+    const userTokens = this.userTokens.get(owner.toLowerCase()) || [];
+    const updatedTokens = userTokens.filter(id => id !== sourceTokenId);
+    this.userTokens.set(owner.toLowerCase(), updatedTokens);
+
+    this.locks.set(targetTokenId, targetLock);
+  }
+
+  /**
+   * Withdraw from an expired lock
+   */
+  async withdrawLock(tokenId: number, owner: string): Promise<void> {
+    const lock = this.locks.get(tokenId);
+    if (!lock) {
+      throw new Error('Token not found');
+    }
+
+    if (lock.owner !== owner.toLowerCase()) {
+      throw new Error('Not the owner of this lock');
+    }
+
+    if (new Date() <= lock.expiresAt) {
+      throw new Error('Lock has not expired yet');
+    }
+
+    // Transfer tokens back to owner
+    await mockTokenService.transfer(this.ESCROW_ADDRESS, owner, lock.amount);
+
+    // Remove lock
+    this.locks.delete(tokenId);
+
+    // Update user's token list
+    const userTokens = this.userTokens.get(owner.toLowerCase()) || [];
+    const updatedTokens = userTokens.filter(id => id !== tokenId);
+    this.userTokens.set(owner.toLowerCase(), updatedTokens);
+  }
 }
 
 export const mockEscrowService = new MockEscrowService();

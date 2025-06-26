@@ -412,3 +412,30 @@ export const proposalTypeCardVariants: Variants = {
     },
   },
 };
+
+// Slide in variants (with custom delay support)
+export const slideInVariants: Variants = {
+  initial: (custom: number = 0) => ({
+    opacity: 0,
+    x: -30,
+    transition: {
+      delay: custom * 0.1,
+    },
+  }),
+  enter: (custom: number = 0) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      ...springConfigs.gentle,
+      delay: custom * 0.1,
+    },
+  }),
+  exit: (custom: number = 0) => ({
+    opacity: 0,
+    x: 30,
+    transition: {
+      duration: 0.2,
+      delay: custom * 0.05,
+    },
+  }),
+};

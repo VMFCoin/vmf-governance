@@ -40,3 +40,60 @@ export const Card: React.FC<CardProps> = ({
     </div>
   );
 };
+
+interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export const CardHeader: React.FC<CardHeaderProps> = ({
+  className,
+  children,
+  ...props
+}) => {
+  return (
+    <div className={cn('flex flex-col space-y-1.5 p-6', className)} {...props}>
+      {children}
+    </div>
+  );
+};
+
+interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export const CardTitle: React.FC<CardTitleProps> = ({
+  className,
+  children,
+  ...props
+}) => {
+  return (
+    <h3
+      className={cn(
+        'text-2xl font-semibold leading-none tracking-tight text-patriotWhite',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </h3>
+  );
+};
+
+interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export const CardContent: React.FC<CardContentProps> = ({
+  className,
+  children,
+  ...props
+}) => {
+  return (
+    <div className={cn('p-6 pt-0', className)} {...props}>
+      {children}
+    </div>
+  );
+};

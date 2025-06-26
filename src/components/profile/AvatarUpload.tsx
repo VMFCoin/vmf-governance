@@ -37,16 +37,17 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Responsive size classes
   const sizeClasses = {
-    sm: 'w-16 h-16',
-    md: 'w-24 h-24',
-    lg: 'w-32 h-32',
+    sm: 'w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16',
+    md: 'w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24',
+    lg: 'w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32',
   };
 
   const iconSizes = {
-    sm: 'w-6 h-6',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12',
+    sm: 'w-4 h-4 sm:w-5 sm:h-5',
+    md: 'w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8',
+    lg: 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12',
   };
 
   const validateFile = (file: File): string | null => {
@@ -179,7 +180,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const showLoading = isLoading || isUploading;
 
   return (
-    <div className={cn('flex flex-col items-center space-y-4', className)}>
+    <div
+      className={cn(
+        'flex flex-col items-center space-y-3 sm:space-y-4',
+        className
+      )}
+    >
       {/* Enhanced Avatar Display/Upload Area */}
       <div className="relative">
         <div
@@ -193,7 +199,9 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
                 : displayUrl
                   ? 'border-patriotBlue/30 hover:border-patriotBlue hover:scale-105'
                   : 'border-dashed border-patriotBlue/50 hover:border-patriotBlue hover:bg-patriotBlue/10',
-            (isLoading || isUploading) && 'cursor-not-allowed'
+            (isLoading || isUploading) && 'cursor-not-allowed',
+            // Touch-friendly on mobile
+            'active:scale-95 sm:active:scale-100'
           )}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -215,9 +223,9 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
                 {/* Overlay for interactions */}
                 {!showLoading && (
                   <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Camera className="w-6 h-6 text-white" />
-                      <span className="text-white text-xs font-medium">
+                    <div className="flex flex-col items-center gap-1 sm:gap-2">
+                      <Camera className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
+                      <span className="text-white text-xs font-medium hidden sm:block">
                         Change
                       </span>
                     </div>
@@ -229,17 +237,19 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
             <div className="w-full h-full rounded-full bg-gradient-to-br from-backgroundLight to-backgroundAccent flex items-center justify-center border border-patriotBlue/20">
               {showLoading ? (
                 <div className="relative flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-patriotBlue/20 border-t-patriotBlue" />
+                  <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 border-2 border-patriotBlue/20 border-t-patriotBlue" />
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 text-patriotBlue">
+                <div className="flex flex-col items-center gap-1 sm:gap-2 text-patriotBlue">
                   <Upload
                     className={cn(
                       iconSizes[size],
                       'group-hover:scale-110 transition-transform duration-200'
                     )}
                   />
-                  <span className="text-xs font-medium opacity-80">Upload</span>
+                  <span className="text-xs font-medium opacity-80 hidden sm:block">
+                    Upload
+                  </span>
                 </div>
               )}
             </div>
@@ -273,7 +283,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-patriotBlue font-bold text-sm">
+                <span className="text-patriotBlue font-bold text-xs sm:text-sm">
                   {Math.round(uploadProgress)}%
                 </span>
               </div>
@@ -283,7 +293,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
           {/* Success Indicator */}
           {uploadSuccess && (
             <div className="absolute inset-0 bg-green-500/90 rounded-full flex items-center justify-center">
-              <Check className="w-8 h-8 text-white animate-bounce" />
+              <Check className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-white animate-bounce" />
             </div>
           )}
         </div>
@@ -295,16 +305,16 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
               e.stopPropagation();
               handleRemove();
             }}
-            className="absolute -top-2 -right-2 w-8 h-8 bg-patriotRed hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110 shadow-lg hover:shadow-xl border-2 border-backgroundBase"
+            className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-patriotRed hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110 shadow-lg hover:shadow-xl border-2 border-backgroundBase"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
         )}
 
         {/* Status Indicator */}
         {uploadSuccess && (
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-backgroundBase animate-pulse">
-            <Check className="w-4 h-4" />
+          <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-backgroundBase animate-pulse">
+            <Check className="w-3 h-3 sm:w-4 sm:h-4" />
           </div>
         )}
       </div>
@@ -312,46 +322,46 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       {/* Enhanced Upload Instructions */}
       <div className="text-center max-w-xs">
         {error ? (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3">
-            <div className="flex items-center justify-center gap-2 text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 sm:p-3 mb-3">
+            <div className="flex items-center justify-center gap-2 text-red-400 text-xs sm:text-sm">
+              <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="text-center">{error}</span>
             </div>
           </div>
         ) : uploadSuccess ? (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
-            <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
-              <Check className="w-4 h-4 flex-shrink-0" />
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2 sm:p-3 mb-3">
+            <div className="flex items-center justify-center gap-2 text-green-400 text-xs sm:text-sm">
+              <Check className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               <span>Avatar uploaded successfully!</span>
             </div>
           </div>
         ) : isUploading ? (
-          <div className="bg-patriotBlue/10 border border-patriotBlue/30 rounded-lg p-3 mb-3">
-            <div className="flex items-center justify-center gap-2 text-patriotBlue text-sm">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-patriotBlue/20 border-t-patriotBlue"></div>
+          <div className="bg-patriotBlue/10 border border-patriotBlue/30 rounded-lg p-2 sm:p-3 mb-3">
+            <div className="flex items-center justify-center gap-2 text-patriotBlue text-xs sm:text-sm">
+              <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-patriotBlue/20 border-t-patriotBlue"></div>
               <span>Uploading... {Math.round(uploadProgress)}%</span>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-patriotWhite font-medium text-sm">
-              {displayUrl ? 'Click to change avatar' : 'Upload your avatar'}
+            <p className="text-patriotWhite font-medium text-xs sm:text-sm">
+              {displayUrl ? 'Tap to change avatar' : 'Upload your avatar'}
             </p>
             <p className="text-textSecondary text-xs leading-relaxed">
               {displayUrl
-                ? 'Click the image or drag a new file to update'
-                : 'Drag & drop an image here, or click to browse'}
+                ? 'Tap the image or drag a new file to update'
+                : 'Drag & drop an image here, or tap to browse'}
             </p>
           </div>
         )}
 
         {/* File Requirements */}
-        <div className="flex items-center justify-center gap-4 text-xs text-textSecondary mt-3">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-textSecondary mt-2 sm:mt-3">
           <div className="flex items-center gap-1">
             <ImageIcon className="w-3 h-3" />
             <span>JPEG, PNG, WebP</span>
           </div>
-          <div className="w-1 h-1 bg-textSecondary rounded-full"></div>
+          <div className="hidden sm:block w-1 h-1 bg-textSecondary rounded-full"></div>
           <span>Max 5MB</span>
         </div>
       </div>

@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Heart,
@@ -27,6 +33,9 @@ import {
   ArrowRight,
   Info,
   Vote,
+  RefreshCw,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { SimpleTooltip } from '@/components/ui/AnimatedTooltip';
@@ -41,6 +50,17 @@ import { cn } from '@/lib/utils';
 import { fadeInVariants } from '@/lib/animations';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useWalletStore } from '@/stores/useWalletStore';
+import {
+  holidayCharityGaugeService,
+  CharityVoteAllocation,
+  HolidayGaugeVoteParams,
+} from '@/services/holidayCharityGaugeService';
+import {
+  deployedGaugeService,
+  CharityGaugeMapping,
+  HolidayVotingResults,
+} from '@/services/deployedGaugeService';
+import { Address } from 'viem';
 
 interface HolidayCharityVotingProps {
   proposal: HolidayCharityProposal;
@@ -56,6 +76,22 @@ export function HolidayCharityVoting({
   const [totalVotingPower, setTotalVotingPower] = useState<bigint>(BigInt(0));
   const [showResults, setShowResults] = useState(false);
 
+  // New state for gauge integration
+  const [charityGaugeMappings, setCharityGaugeMappings] = useState<
+    CharityGaugeMapping[]
+  >([]);
+  const [holidayVotingResults, setHolidayVotingResults] =
+    useState<HolidayVotingResults | null>(null);
+  const [isLoadingGauges, setIsLoadingGauges] = useState(false);
+  const [gaugeError, setGaugeError] = useState<string | null>(null);
+  const [userVotedGauges, setUserVotedGauges] = useState<Address[]>([]);
+  const [isVotingActive, setIsVotingActive] = useState(false);
+  const [votingPeriodInfo, setVotingPeriodInfo] = useState<any>(null);
+
+  // Real-time updates
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
   // Wallet connection
   const { address, isConnected } = useWalletConnection();
 
@@ -66,7 +102,7 @@ export function HolidayCharityVoting({
   const getCharityById = useCharityStore(state => state.getCharityById);
 
   const { submitVote, getUserVote } = useProposalStore();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
 
   const votingPowerBreakdown = useTokenLockStore(
     state => state.votingPowerBreakdown
@@ -77,9 +113,93 @@ export function HolidayCharityVoting({
     state => state.getTotalVotingPower
   );
 
-  // Check if user has already voted
+  // Get user's locked NFT token IDs for voting
+  const userTokenIds = useMemo(() => {
+    if (!votingPowerBreakdown?.locks) return [];
+    return votingPowerBreakdown.locks.map(lock => lock.id);
+  }, [votingPowerBreakdown?.locks]);
+
+  // Check if user has already voted using gauge system
+  const hasVotedOnGauge = useMemo(() => {
+    if (!userVotedGauges.length || !charityGaugeMappings.length) return false;
+
+    // Check if user has voted on any charity gauge for this holiday
+    return charityGaugeMappings.some(mapping =>
+      userVotedGauges.includes(mapping.gaugeAddress)
+    );
+  }, [userVotedGauges, charityGaugeMappings]);
+
+  // Legacy vote check for backward compatibility
   const userVote = getUserVote(proposal.id);
-  const hasVoted = !!userVote;
+  const hasVoted = hasVotedOnGauge || !!userVote;
+
+  // Initialize gauge mappings and voting data
+  const initializeGaugeData = useCallback(async () => {
+    if (!proposal?.availableCharities?.length || isLoadingGauges) return;
+
+    setIsLoadingGauges(true);
+    setGaugeError(null);
+
+    try {
+      // Get charity objects
+      const holidayCharities = proposal.availableCharities
+        .map(charityId => getCharityById(charityId))
+        .filter((charity): charity is Charity => charity !== null);
+
+      if (holidayCharities.length === 0) {
+        throw new Error('No valid charities found for this holiday');
+      }
+
+      // Create charity gauge mappings
+      const mappings =
+        await holidayCharityGaugeService.createCharityGaugeMappings(
+          proposal.id,
+          holidayCharities
+        );
+      setCharityGaugeMappings(mappings);
+
+      // Get voting results
+      const results = await holidayCharityGaugeService.getHolidayVotingResults(
+        proposal.id,
+        holidayCharities
+      );
+      setHolidayVotingResults(results);
+
+      // Check voting period status
+      const periodInfo = await holidayCharityGaugeService.getVotingPeriodInfo();
+      setVotingPeriodInfo(periodInfo);
+      setIsVotingActive(periodInfo.isActive);
+
+      console.log('Gauge data initialized:', { mappings, results, periodInfo });
+    } catch (error) {
+      console.error('Failed to initialize gauge data:', error);
+      setGaugeError(
+        error instanceof Error ? error.message : 'Failed to load voting data'
+      );
+    } finally {
+      setIsLoadingGauges(false);
+    }
+  }, [
+    proposal?.availableCharities,
+    proposal?.id,
+    getCharityById,
+    isLoadingGauges,
+  ]);
+
+  // Load user's voted gauges
+  const loadUserVotedGauges = useCallback(async () => {
+    if (!userTokenIds.length) return;
+
+    try {
+      // Get voted gauges for the first token ID (assuming single token voting for now)
+      const votedGauges = await holidayCharityGaugeService.getTokenVotedGauges(
+        userTokenIds[0]
+      );
+      setUserVotedGauges(votedGauges);
+    } catch (error) {
+      console.error('Failed to load user voted gauges:', error);
+    }
+  }, [userTokenIds]);
 
   // Stable function references
   const handleFetchCharities = useCallback(async () => {
@@ -116,6 +236,65 @@ export function HolidayCharityVoting({
     }
   }, [isConnected, address, handleFetchCharities, handleFetchVotingPower]);
 
+  // Initialize gauge data when charities are loaded
+  useEffect(() => {
+    if (charities.length > 0 && !isLoadingGauges) {
+      initializeGaugeData();
+    }
+  }, [charities.length, initializeGaugeData, isLoadingGauges]);
+
+  // Load user voted gauges when token IDs are available
+  useEffect(() => {
+    if (userTokenIds.length > 0) {
+      loadUserVotedGauges();
+    }
+  }, [userTokenIds, loadUserVotedGauges]);
+
+  // Subscribe to real-time voting events
+  useEffect(() => {
+    if (!isSubscribed && charityGaugeMappings.length > 0) {
+      const unsubscribe = holidayCharityGaugeService.subscribeToVotingEvents(
+        event => {
+          console.log('Vote event received:', event);
+
+          // Refresh voting results when new votes come in
+          if (
+            charityGaugeMappings.some(
+              mapping => mapping.gaugeAddress === event.gauge
+            )
+          ) {
+            initializeGaugeData();
+
+            // If it's the current user's vote, update their voted gauges
+            if (
+              address &&
+              event.voter.toLowerCase() === address.toLowerCase()
+            ) {
+              loadUserVotedGauges();
+            }
+          }
+        }
+      );
+
+      unsubscribeRef.current = unsubscribe;
+      setIsSubscribed(true);
+    }
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+        setIsSubscribed(false);
+      }
+    };
+  }, [
+    isSubscribed,
+    charityGaugeMappings,
+    address,
+    initializeGaugeData,
+    loadUserVotedGauges,
+  ]);
+
   // Update total voting power when breakdown changes
   useEffect(() => {
     if (votingPowerBreakdown) {
@@ -131,40 +310,67 @@ export function HolidayCharityVoting({
     return powerNumber.toLocaleString(undefined, { maximumFractionDigits: 2 });
   }, []);
 
-  // Map charities with voting data
+  // Map charities with gauge voting data
   const availableCharities = useMemo(() => {
-    if (!proposal?.availableCharities || charitiesLoading) return [];
+    if (
+      !proposal?.availableCharities ||
+      charitiesLoading ||
+      !charityGaugeMappings.length
+    )
+      return [];
 
-    // Map charity IDs to actual charity objects with voting data
     return proposal.availableCharities
       .map(charityId => {
         const charity = getCharityById(charityId);
         if (!charity) return null;
 
-        const voteData = proposal.charityVotes?.[charityId] || {
-          votes: 0,
+        // Find the corresponding gauge mapping
+        const gaugeMapping = charityGaugeMappings.find(
+          mapping => mapping.charityId === charityId
+        );
+        if (!gaugeMapping) return null;
+
+        // Get voting data from holiday voting results
+        const voteData = holidayVotingResults?.charityMappings.find(
+          (mapping: CharityGaugeMapping) => mapping.charityId === charityId
+        ) || {
+          votes: BigInt(0),
           percentage: 0,
+          totalVotingPower: BigInt(0),
+          rank: 0,
         };
 
         return {
           ...charity,
-          votes: voteData.votes,
+          votes: Number(voteData.votes),
           percentage: voteData.percentage,
+          totalVotingPower: voteData.votes,
+          rank: 0, // Will be calculated after sorting
+          gaugeAddress: gaugeMapping.gaugeAddress,
+          gaugeMapping,
         };
       })
       .filter(
-        (charity): charity is Charity & { votes: number; percentage: number } =>
-          charity !== null
+        (
+          charity
+        ): charity is Charity & {
+          votes: number;
+          percentage: number;
+          totalVotingPower: bigint;
+          rank: number;
+          gaugeAddress: Address;
+          gaugeMapping: CharityGaugeMapping;
+        } => charity !== null
       );
   }, [
     proposal?.availableCharities,
-    proposal?.charityVotes,
-    charities,
     charitiesLoading,
+    charityGaugeMappings,
+    holidayVotingResults,
     getCharityById,
   ]);
 
-  // Handle direct charity vote submission
+  // Handle gauge-based charity vote submission
   const handleCharityVote = async (charityId: string) => {
     if (hasVoted) {
       showError('Already Voted', 'You have already voted on this proposal.');
@@ -176,22 +382,85 @@ export function HolidayCharityVoting({
       return;
     }
 
+    if (!isVotingActive) {
+      showError(
+        'Voting Inactive',
+        'Voting is not currently active for this period.'
+      );
+      return;
+    }
+
+    if (userTokenIds.length === 0) {
+      showError('No Tokens', 'You need locked NFT tokens to vote.');
+      return;
+    }
+
+    const charity = availableCharities.find(c => c.id === charityId);
+    if (!charity) {
+      showError('Invalid Charity', 'Selected charity not found.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const votingPowerToUse = Number(totalVotingPower) / 1e18;
+      // Use the first available token ID for voting
+      const tokenId = userTokenIds[0];
 
-      // Submit vote with charity ID as the vote value
-      await submitVote(proposal.id, charityId, votingPowerToUse);
-
-      showSuccess(
-        'Vote Submitted!',
-        `Your vote for ${getCharityById(charityId)?.name} has been recorded.`
+      const result = await holidayCharityGaugeService.submitSingleCharityVote(
+        tokenId,
+        charityId,
+        charity.gaugeAddress
       );
 
-      onVoteSubmitted?.();
+      if (result.success) {
+        showSuccess(
+          'Vote Submitted!',
+          `Your vote for ${charity.name} has been recorded on-chain.`
+        );
+
+        // Refresh data after successful vote
+        await Promise.all([initializeGaugeData(), loadUserVotedGauges()]);
+
+        onVoteSubmitted?.();
+      } else {
+        throw new Error(result.error || 'Vote submission failed');
+      }
     } catch (error) {
       console.error('Failed to submit vote:', error);
-      showError('Vote Failed', 'There was an error submitting your vote.');
+      showError(
+        'Vote Failed',
+        error instanceof Error
+          ? error.message
+          : 'There was an error submitting your vote.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reset user votes
+  const handleResetVotes = async () => {
+    if (!hasVoted || userTokenIds.length === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      const tokenId = userTokenIds[0];
+      const result = await holidayCharityGaugeService.resetVotes(tokenId);
+
+      if (result.success) {
+        showSuccess('Votes Reset', 'Your votes have been reset successfully.');
+
+        // Refresh data after reset
+        await Promise.all([initializeGaugeData(), loadUserVotedGauges()]);
+      } else {
+        throw new Error(result.error || 'Vote reset failed');
+      }
+    } catch (error) {
+      console.error('Failed to reset votes:', error);
+      showError(
+        'Reset Failed',
+        error instanceof Error ? error.message : 'Failed to reset votes.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -200,19 +469,36 @@ export function HolidayCharityVoting({
   // Get charity vote data for results display
   const getCharityVoteData = useCallback(
     (charityId: string) => {
-      return proposal.charityVotes[charityId] || { votes: 0, percentage: 0 };
+      const charity = availableCharities.find(c => c.id === charityId);
+      return charity
+        ? {
+            votes: charity.votes,
+            percentage: charity.percentage,
+            totalVotingPower: charity.totalVotingPower,
+            rank: charity.rank,
+          }
+        : { votes: 0, percentage: 0, totalVotingPower: BigInt(0), rank: 0 };
     },
-    [proposal.charityVotes]
+    [availableCharities]
   );
 
   // Sort charities by vote percentage for results display
   const sortedCharities = useMemo(() => {
     return [...availableCharities].sort((a, b) => {
-      const aVotes = getCharityVoteData(a.id);
-      const bVotes = getCharityVoteData(b.id);
-      return bVotes.percentage - aVotes.percentage;
+      return b.percentage - a.percentage;
     });
-  }, [availableCharities, getCharityVoteData]);
+  }, [availableCharities]);
+
+  // Check if user has voted for a specific charity
+  const hasUserVotedForCharity = useCallback(
+    (charityId: string) => {
+      const charity = availableCharities.find(c => c.id === charityId);
+      if (!charity) return false;
+
+      return userVotedGauges.includes(charity.gaugeAddress);
+    },
+    [availableCharities, userVotedGauges]
+  );
 
   return (
     <ProfileGuard fallbackMessage="You need a profile to vote on holiday charity proposals.">
@@ -323,6 +609,33 @@ export function HolidayCharityVoting({
           transition={{ delay: 0.1 }}
         >
           <Card className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 border-slate-700/50 p-6 rounded-xl">
+            {/* Gauge loading or error state */}
+            {(isLoadingGauges || gaugeError) && (
+              <div className="mb-4 p-3 rounded-lg border">
+                {isLoadingGauges ? (
+                  <div className="flex items-center space-x-3 text-blue-400 border-blue-400/30 bg-blue-400/10">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Loading gauge data...</span>
+                  </div>
+                ) : gaugeError ? (
+                  <div className="flex items-center justify-between text-red-400 border-red-400/30 bg-red-400/10">
+                    <div className="flex items-center space-x-3">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm">{gaugeError}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={initializeGaugeData}
+                      className="text-red-400 hover:text-red-300 h-auto p-1"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center justify-center w-10 h-10 bg-slate-700/50 rounded-lg">
@@ -342,37 +655,93 @@ export function HolidayCharityVoting({
                       `${formatVotingPower(totalVotingPower)} VMF`
                     )}
                   </div>
+                  {userTokenIds.length > 0 && (
+                    <div className="text-xs text-slate-400 mt-1">
+                      Token ID: {userTokenIds[0]}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div
-                className={cn(
-                  'inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium',
-                  hasVoted
-                    ? 'bg-green-500/20 text-green-400'
-                    : totalVotingPower > 0
-                      ? 'bg-blue-500/20 text-blue-400'
-                      : 'bg-red-500/20 text-red-400'
-                )}
-              >
-                {hasVoted ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Vote Submitted</span>
-                  </>
-                ) : totalVotingPower > 0 ? (
-                  <>
-                    <Target className="w-4 h-4" />
-                    <span>Ready to Vote</span>
-                  </>
-                ) : (
-                  <>
-                    <X className="w-4 h-4" />
-                    <span>Lock tokens to vote</span>
-                  </>
+              <div className="flex flex-col items-end space-y-2">
+                {/* Voting status */}
+                <div
+                  className={cn(
+                    'inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium',
+                    hasVoted
+                      ? 'bg-green-500/20 text-green-400'
+                      : totalVotingPower > 0 && isVotingActive
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-red-500/20 text-red-400'
+                  )}
+                >
+                  {hasVoted ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Vote Submitted</span>
+                    </>
+                  ) : totalVotingPower > 0 && isVotingActive ? (
+                    <>
+                      <Target className="w-4 h-4" />
+                      <span>Ready to Vote</span>
+                    </>
+                  ) : !isVotingActive ? (
+                    <>
+                      <Clock className="w-4 h-4" />
+                      <span>Voting Inactive</span>
+                    </>
+                  ) : (
+                    <>
+                      <X className="w-4 h-4" />
+                      <span>Lock tokens to vote</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Reset votes button */}
+                {hasVoted && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleResetVotes}
+                    disabled={isSubmitting}
+                    className="text-xs border-slate-600 text-slate-300 hover:text-white hover:border-slate-500"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    ) : (
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                    )}
+                    Reset Vote
+                  </Button>
                 )}
               </div>
             </div>
+
+            {/* Voting period info */}
+            {votingPeriodInfo && (
+              <div className="mt-4 pt-4 border-t border-slate-700/50">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-slate-400">Epoch ID</div>
+                    <div className="text-white font-medium">
+                      {votingPeriodInfo.epochId.toString()}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400">Voting Active</div>
+                    <div
+                      className={cn(
+                        'font-medium',
+                        isVotingActive ? 'text-green-400' : 'text-red-400'
+                      )}
+                    >
+                      {isVotingActive ? 'Yes' : 'No'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
         </motion.div>
 
@@ -480,7 +849,7 @@ export function HolidayCharityVoting({
                   {sortedCharities.map((charity, index) => {
                     const voteData = getCharityVoteData(charity.id);
                     const isLeading = index === 0;
-                    const isUserVote = userVote?.vote === charity.id;
+                    const isUserVote = hasUserVotedForCharity(charity.id);
 
                     return (
                       <motion.div
@@ -633,7 +1002,7 @@ export function HolidayCharityVoting({
                         <div className="w-2 h-2 bg-yellow-400 rounded-full" />
                         <span>Leading</span>
                       </div>
-                      {userVote && (
+                      {hasVoted && (
                         <div className="flex items-center space-x-1">
                           <div className="w-2 h-2 bg-green-400 rounded-full" />
                           <span>Your Vote</span>
@@ -702,24 +1071,36 @@ export function HolidayCharityVoting({
             {!charitiesLoading && availableCharities.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {availableCharities.map((charity, index) => {
-                  const isUserVote = userVote?.vote === charity.id;
-                  const canVote = !hasVoted && totalVotingPower > 0;
+                  const isUserVote = hasUserVotedForCharity(charity.id);
+                  const canVote =
+                    !hasVoted &&
+                    totalVotingPower > 0 &&
+                    isVotingActive &&
+                    !isLoadingGauges &&
+                    !gaugeError;
+                  const isSubmittingThisCharity =
+                    isSubmitting && selectedCharity === charity.id;
 
                   return (
                     <motion.div
                       key={charity.id}
                       className={cn(
-                        'group relative border rounded-xl p-4 sm:p-6 transition-all duration-300 cursor-pointer overflow-hidden',
+                        'group relative border rounded-xl p-4 sm:p-6 transition-all duration-300 overflow-hidden',
                         'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/5 before:to-transparent before:translate-x-[-100%] before:transition-transform before:duration-700',
                         isUserVote
                           ? 'border-green-500/60 bg-gradient-to-br from-green-500/20 to-emerald-500/10 shadow-lg shadow-green-500/20'
                           : canVote
-                            ? 'border-slate-600/50 bg-gradient-to-br from-slate-800/40 to-slate-900/60 hover:border-blue-400/60 hover:shadow-xl hover:shadow-blue-500/20 hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-slate-800/40'
+                            ? 'border-slate-600/50 bg-gradient-to-br from-slate-800/40 to-slate-900/60 hover:border-blue-400/60 hover:shadow-xl hover:shadow-blue-500/20 hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-slate-800/40 cursor-pointer'
                             : 'border-slate-700/40 bg-gradient-to-br from-slate-800/20 to-slate-900/40 opacity-60'
                       )}
-                      onClick={() => canVote && handleCharityVote(charity.id)}
+                      onClick={() => {
+                        if (canVote && !isSubmittingThisCharity) {
+                          setSelectedCharity(charity.id);
+                          handleCharityVote(charity.id);
+                        }
+                      }}
                       whileHover={
-                        canVote
+                        canVote && !isSubmittingThisCharity
                           ? {
                               scale: 1.02,
                               y: -6,
@@ -729,7 +1110,7 @@ export function HolidayCharityVoting({
                           : {}
                       }
                       whileTap={
-                        canVote
+                        canVote && !isSubmittingThisCharity
                           ? {
                               scale: 0.98,
                               y: -2,
@@ -748,36 +1129,27 @@ export function HolidayCharityVoting({
                         transformStyle: 'preserve-3d',
                         perspective: '1000px',
                       }}
-                      onHoverStart={() => {
-                        if (canVote) {
-                          // Trigger shimmer effect
-                          const element = document.querySelector(
-                            `[data-charity-id="${charity.id}"]`
-                          );
-                          if (element) {
-                            element.classList.add('before:translate-x-[100%]');
-                          }
-                        }
-                      }}
-                      onHoverEnd={() => {
-                        if (canVote) {
-                          const element = document.querySelector(
-                            `[data-charity-id="${charity.id}"]`
-                          );
-                          if (element) {
-                            element.classList.remove(
-                              'before:translate-x-[100%]'
-                            );
-                          }
-                        }
-                      }}
                       data-charity-id={charity.id}
                     >
+                      {/* Loading overlay for this specific charity */}
+                      {isSubmittingThisCharity && (
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
+                          <div className="flex items-center space-x-3 text-white">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="font-medium">
+                              Submitting Vote...
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Animated background glow */}
                       <div
                         className={cn(
                           'absolute inset-0 rounded-xl opacity-0 transition-opacity duration-500',
-                          canVote && 'group-hover:opacity-100',
+                          canVote &&
+                            !isSubmittingThisCharity &&
+                            'group-hover:opacity-100',
                           isUserVote
                             ? 'bg-gradient-to-r from-green-500/20 via-emerald-400/20 to-green-500/20'
                             : 'bg-gradient-to-r from-blue-500/20 via-cyan-400/20 to-blue-500/20'
@@ -792,7 +1164,7 @@ export function HolidayCharityVoting({
                             <motion.div
                               className="relative flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-slate-700/60 to-slate-800/80 rounded-xl flex-shrink-0 shadow-lg border border-slate-600/30"
                               whileHover={
-                                canVote
+                                canVote && !isSubmittingThisCharity
                                   ? {
                                       scale: 1.1,
                                       rotate: [0, -5, 5, 0],
@@ -812,6 +1184,7 @@ export function HolidayCharityVoting({
                                 className={cn(
                                   'absolute inset-0 rounded-xl border-2 opacity-0 transition-all duration-300',
                                   canVote &&
+                                    !isSubmittingThisCharity &&
                                     'group-hover:opacity-100 group-hover:scale-110',
                                   isUserVote
                                     ? 'border-green-400 shadow-lg shadow-green-400/50'

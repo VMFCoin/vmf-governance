@@ -315,6 +315,11 @@ export interface GaugeInfo {
 export interface VotingPowerBreakdown {
   totalLocked: bigint;
   totalVotingPower: bigint;
+  activeVotingPower: bigint;
+  warmingUpLocked: bigint;
+  warmingUpCount: number;
+  activeLocked: bigint;
+  activeCount: number;
   locks: TokenLock[];
   powerUsed: bigint;
   powerAvailable: bigint;

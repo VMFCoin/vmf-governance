@@ -81,6 +81,11 @@ export const TokenLockingInterface: React.FC<TokenLockingInterfaceProps> = ({
   const defaultBreakdown = {
     totalLocked: BigInt(0),
     totalVotingPower: BigInt(0),
+    activeVotingPower: BigInt(0),
+    warmingUpLocked: BigInt(0),
+    warmingUpCount: 0,
+    activeLocked: BigInt(0),
+    activeCount: 0,
     locks: [],
     powerUsed: BigInt(0),
     powerAvailable: BigInt(0),
@@ -294,7 +299,7 @@ export const TokenLockingInterface: React.FC<TokenLockingInterfaceProps> = ({
       <TokenLockingModal
         isOpen={isLockingModalOpen}
         onClose={() => setIsLockingModalOpen(false)}
-        onSuccess={handleLockCreated}
+        onLockCreated={handleLockCreated}
       />
     </motion.div>
   );
