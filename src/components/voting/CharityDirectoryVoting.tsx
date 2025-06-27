@@ -51,7 +51,7 @@ export function CharityDirectoryVoting({
       fetchUserLocks(address);
       getTotalVotingPower(address).then(setTotalVotingPower);
     }
-  }, [isConnected, address, fetchUserLocks, getTotalVotingPower]);
+  }, [isConnected, address]);
 
   // Update total voting power when breakdown changes
   useEffect(() => {

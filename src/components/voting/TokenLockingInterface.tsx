@@ -12,8 +12,10 @@ import {
 } from './';
 import { useTokenLockStore } from '@/stores/useTokenLockStore';
 import { useWalletStore } from '@/stores/useWalletStore';
-import { cn } from '@/lib/utils';
+import { cn, formatVMFSafe } from '@/lib/utils';
 import { fadeInVariants, staggerContainer } from '@/lib/animations';
+import { VotingPowerBreakdown } from '@/types';
+import { ExtendedVotingPowerBreakdown, ExtendedLockInfo } from '@/types/lock';
 
 interface TokenLockingInterfaceProps {
   className?: string;
@@ -41,7 +43,7 @@ export const TokenLockingInterface: React.FC<TokenLockingInterfaceProps> = ({
     if (isConnected && address) {
       fetchUserLocks(address);
     }
-  }, [isConnected, address, fetchUserLocks]);
+  }, [isConnected, address]);
 
   const handleRefresh = async () => {
     if (isConnected && address) {
@@ -77,8 +79,7 @@ export const TokenLockingInterface: React.FC<TokenLockingInterfaceProps> = ({
     fetchVotingPower();
   }, [isConnected, address, getAvailableVotingPower, userLocks]);
 
-  // Create default breakdown if null
-  const defaultBreakdown = {
+  const defaultBreakdown: VotingPowerBreakdown = {
     totalLocked: BigInt(0),
     totalVotingPower: BigInt(0),
     activeVotingPower: BigInt(0),
@@ -91,7 +92,31 @@ export const TokenLockingInterface: React.FC<TokenLockingInterfaceProps> = ({
     powerAvailable: BigInt(0),
   };
 
-  const breakdown = votingPowerBreakdown || defaultBreakdown;
+  // Convert ExtendedVotingPowerBreakdown to VotingPowerBreakdown
+  const mapExtendedToVotingPowerBreakdown = (
+    extended: ExtendedVotingPowerBreakdown
+  ): VotingPowerBreakdown => {
+    return {
+      ...extended,
+      locks: extended.locks.map((lock: ExtendedLockInfo) => ({
+        id: lock.tokenId,
+        owner: lock.owner || '',
+        amount: lock.amount,
+        lockDuration: 0, // Not available in ExtendedLockInfo
+        createdAt: lock.createdAt || new Date(),
+        expiresAt: new Date(lock.end * 1000),
+        warmupEndsAt: lock.warmupEndTime,
+        votingPower: lock.votingPower,
+        isWarmupComplete: lock.isWarmupComplete,
+      })),
+      powerUsed: BigInt(0), // Default value
+      powerAvailable: extended.activeVotingPower, // Use active voting power as available power
+    };
+  };
+
+  const breakdown = votingPowerBreakdown
+    ? mapExtendedToVotingPowerBreakdown(votingPowerBreakdown)
+    : defaultBreakdown;
 
   if (!isConnected) {
     return (
@@ -224,13 +249,7 @@ export const TokenLockingInterface: React.FC<TokenLockingInterfaceProps> = ({
                   Available Voting Power
                 </span>
                 <span className="font-semibold text-yellow-400">
-                  {(Number(availableVotingPower) / 1e18).toLocaleString(
-                    undefined,
-                    {
-                      maximumFractionDigits: 2,
-                    }
-                  )}{' '}
-                  VMF
+                  {formatVMFSafe(availableVotingPower)} VMF
                 </span>
               </div>
             </div>

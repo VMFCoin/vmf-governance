@@ -32,7 +32,7 @@ import {
   CharityGaugeMapping,
 } from '@/services/deployedGaugeService';
 import { Charity } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatVMFSafe, formatNumberSafe } from '@/lib/utils';
 import { fadeInVariants } from '@/lib/animations';
 import { Address } from 'viem';
 
@@ -290,10 +290,12 @@ export function CharityVoteAllocation({
     }
   }, [allocations, onAllocationChange]);
 
+  // Format voting power for display
   const formatVotingPower = (power: bigint): string => {
-    const formatted = Number(power) / 1e18;
-    if (formatted < 1) return formatted.toFixed(4);
-    return formatted.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const powerNumber = Number(power) / 1e18;
+    if (powerNumber === 0) return '0';
+    if (powerNumber < 1) return powerNumber.toFixed(4);
+    return formatNumberSafe(powerNumber, { maximumFractionDigits: 2 });
   };
 
   if (allocations.length === 0) {

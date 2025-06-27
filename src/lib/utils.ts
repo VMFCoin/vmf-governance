@@ -104,6 +104,45 @@ export const formatNumber = (
   return new Intl.NumberFormat('en-US', options).format(num);
 };
 
+// Hydration-safe number formatting - prevents SSR/client mismatch
+export const formatNumberSafe = (
+  num: number,
+  options?: {
+    maximumFractionDigits?: number;
+    minimumFractionDigits?: number;
+    useGrouping?: boolean;
+  }
+): string => {
+  const {
+    maximumFractionDigits = 0,
+    minimumFractionDigits = 0,
+    useGrouping = true,
+  } = options || {};
+
+  // Use consistent formatting that works the same on server and client
+  const formatter = new Intl.NumberFormat('en-US', {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    useGrouping,
+  });
+
+  return formatter.format(num);
+};
+
+// Hydration-safe currency formatting
+export const formatCurrencySafe = (amount: number): string => {
+  return formatNumberSafe(amount, { useGrouping: true });
+};
+
+// Hydration-safe VMF token formatting
+export const formatVMFSafe = (amount: number | bigint): string => {
+  const numAmount = typeof amount === 'bigint' ? Number(amount) / 1e18 : amount;
+  return formatNumberSafe(numAmount, {
+    maximumFractionDigits: 2,
+    useGrouping: true,
+  });
+};
+
 export const formatCurrency = (
   amount: number,
   currency: string = 'USD'

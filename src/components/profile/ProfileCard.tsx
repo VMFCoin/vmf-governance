@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Edit,
   Save,
@@ -24,7 +24,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useUserProfileStore } from '@/stores/useUserProfileStore';
 import { useTokenLockStore } from '@/stores/useTokenLockStore';
 import { useWalletStore } from '@/stores/useWalletStore';
-import { cn } from '@/lib/utils';
+import { cn, formatNumberSafe } from '@/lib/utils';
 import { useVMFBalance } from '@/hooks/useVMFBalance';
 
 interface ProfileCardProps {
@@ -59,7 +59,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
     refreshBalance,
   } = useVMFBalance();
 
-  console.log('userBalance:', walletBalance);
+  console.log('ProfileCard render - userBalance:', walletBalance);
+  console.log('ProfileCard render - wallet state:', { address, isConnected });
+  console.log(
+    'ProfileCard render - voting power breakdown:',
+    votingPowerBreakdown
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(profile?.name || '');
@@ -70,27 +75,47 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const [totalVotingPower, setTotalVotingPower] = useState<bigint>(BigInt(0));
 
-  // Fetch voting power data when wallet is connected
-  useEffect(() => {
+  // Create stable callback for fetching user locks
+  const fetchUserLocksCallback = useCallback(async () => {
     if (isConnected && address) {
-      fetchUserLocks(address);
-      getTotalVotingPower(address).then(setTotalVotingPower);
+      console.log('ProfileCard: Fetching user locks for address:', address);
+      try {
+        await fetchUserLocks(address);
+        const power = await getTotalVotingPower(address);
+        setTotalVotingPower(power);
+        console.log('ProfileCard: Successfully fetched locks and voting power');
+      } catch (error) {
+        console.error('ProfileCard: Error fetching locks:', error);
+      }
     }
   }, [isConnected, address, fetchUserLocks, getTotalVotingPower]);
+
+  // Fetch voting power data when wallet is connected
+  useEffect(() => {
+    console.log('ProfileCard: useEffect triggered for lock fetching');
+    fetchUserLocksCallback();
+  }, [fetchUserLocksCallback]);
 
   // Update total voting power when breakdown changes
   useEffect(() => {
     if (votingPowerBreakdown) {
+      console.log('ProfileCard: Updating total voting power from breakdown');
       setTotalVotingPower(votingPowerBreakdown.totalVotingPower);
     }
   }, [votingPowerBreakdown]);
 
-  // Refresh wallet balance when voting power changes (tokens locked/unlocked)
-  useEffect(() => {
+  // Create stable callback for refreshing balance
+  const refreshBalanceCallback = useCallback(() => {
     if (isConnected && address) {
+      console.log('ProfileCard: Refreshing wallet balance');
       refreshBalance();
     }
-  }, [totalVotingPower, isConnected, address, refreshBalance]);
+  }, [isConnected, address, refreshBalance]);
+
+  // Refresh wallet balance when voting power changes (tokens locked/unlocked)
+  useEffect(() => {
+    refreshBalanceCallback();
+  }, [totalVotingPower, refreshBalanceCallback]);
 
   // Calculate lock status from breakdown
   const hasActiveLocks = (votingPowerBreakdown?.activeCount ?? 0) > 0;
@@ -99,6 +124,13 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
     votingPowerBreakdown?.locks?.filter(lock => lock.isWarmupComplete) || [];
   const warmingUpLocks =
     votingPowerBreakdown?.locks?.filter(lock => !lock.isWarmupComplete) || [];
+
+  console.log('ProfileCard: Lock status calculated', {
+    hasActiveLocks,
+    hasWarmingUpLocks,
+    activeLocksCount: activeLocks.length,
+    warmingUpLocksCount: warmingUpLocks.length,
+  });
 
   // Format VMF amounts for display
   const formatVMFAmount = (amount: bigint): string => {
@@ -113,7 +145,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
     const powerNumber = Number(power) / 1e18;
     if (powerNumber === 0) return '0';
     if (powerNumber < 1) return powerNumber.toFixed(4);
-    return powerNumber.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return formatNumberSafe(powerNumber, { maximumFractionDigits: 2 });
   };
 
   if (isLoading) {

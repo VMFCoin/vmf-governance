@@ -46,7 +46,12 @@ import { useProposalStore } from '@/stores/useProposalStore';
 import { useTokenLockStore } from '@/stores/useTokenLockStore';
 import { useWalletSync } from '@/hooks/useWalletSync';
 import { HolidayCharityProposal, Charity } from '@/types';
-import { cn } from '@/lib/utils';
+import {
+  cn,
+  formatCurrencySafe,
+  formatVMFSafe,
+  formatNumberSafe,
+} from '@/lib/utils';
 import { fadeInVariants } from '@/lib/animations';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useWalletStore } from '@/stores/useWalletStore';
@@ -116,7 +121,7 @@ export function HolidayCharityVoting({
   // Get user's locked NFT token IDs for voting
   const userTokenIds = useMemo(() => {
     if (!votingPowerBreakdown?.locks) return [];
-    return votingPowerBreakdown.locks.map(lock => lock.id);
+    return votingPowerBreakdown.locks.map(lock => lock.tokenId);
   }, [votingPowerBreakdown?.locks]);
 
   // Check if user has already voted using gauge system
@@ -307,7 +312,7 @@ export function HolidayCharityVoting({
     const powerNumber = Number(power) / 1e18;
     if (powerNumber === 0) return '0';
     if (powerNumber < 1) return powerNumber.toFixed(4);
-    return powerNumber.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return formatNumberSafe(powerNumber, { maximumFractionDigits: 2 });
   }, []);
 
   // Map charities with gauge voting data
@@ -530,7 +535,7 @@ export function HolidayCharityVoting({
                 transition={{ delay: 0.2 }}
               >
                 Vote for which charity should receive the $
-                {proposal.fundAmount.toLocaleString()} Veterans Day fund
+                {formatCurrencySafe(proposal.fundAmount)} Veterans Day fund
               </motion.p>
             </div>
 
@@ -539,7 +544,7 @@ export function HolidayCharityVoting({
               {[
                 {
                   icon: DollarSign,
-                  value: `$${proposal.fundAmount.toLocaleString()}`,
+                  value: `$${formatCurrencySafe(proposal.fundAmount)}`,
                   label: 'Total Fund',
                   color: 'starGold',
                   delay: 0.1,
@@ -652,7 +657,9 @@ export function HolidayCharityVoting({
                         <span className="text-sm">Loading...</span>
                       </div>
                     ) : (
-                      `${formatVotingPower(totalVotingPower)} VMF`
+                      <span className="font-semibold text-yellow-400">
+                        {formatVMFSafe(totalVotingPower)} VMF
+                      </span>
                     )}
                   </div>
                   {userTokenIds.length > 0 && (

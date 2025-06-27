@@ -249,7 +249,7 @@ export const LockAnalyticsDashboard: React.FC<LockAnalyticsDashboardProps> = ({
     if (isConnected && address) {
       fetchUserLocks(address);
     }
-  }, [isConnected, address, fetchUserLocks]);
+  }, [isConnected, address]);
 
   useEffect(() => {
     if (userLocks.length > 0) {

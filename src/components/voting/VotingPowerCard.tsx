@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { SimpleTooltip } from '@/components/ui/AnimatedTooltip';
 import { useTokenLockStore } from '@/stores/useTokenLockStore';
 import { useWalletStore } from '@/stores/useWalletStore';
-import { cn } from '@/lib/utils';
+import { cn, formatVMFSafe, formatNumberSafe } from '@/lib/utils';
 import { fadeInVariants } from '@/lib/animations';
 
 interface VotingPowerCardProps {
@@ -50,7 +50,7 @@ export const VotingPowerCard: React.FC<VotingPowerCardProps> = ({
       fetchUserLocks(address);
       getTotalVotingPower(address).then(setTotalVotingPower);
     }
-  }, [isConnected, address, fetchUserLocks, getTotalVotingPower]);
+  }, [isConnected, address]);
 
   // Update total voting power when breakdown changes
   useEffect(() => {
@@ -64,7 +64,7 @@ export const VotingPowerCard: React.FC<VotingPowerCardProps> = ({
     const powerNumber = Number(power) / 1e18;
     if (powerNumber === 0) return '0';
     if (powerNumber < 1) return powerNumber.toFixed(4);
-    return powerNumber.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return formatNumberSafe(powerNumber, { maximumFractionDigits: 2 });
   };
 
   // Calculate lock status

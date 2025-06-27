@@ -19,6 +19,8 @@ import { useWalletStore } from '@/stores/useWalletStore';
 import { TokenLock } from '@/types';
 import { cn } from '@/lib/utils';
 import { fadeInVariants } from '@/lib/animations';
+import { getAccount } from '@wagmi/core';
+import { config } from '@/lib/wagmi';
 
 interface LockingStatusProps {
   onCreateLock?: () => void;
@@ -38,12 +40,14 @@ export const LockingStatus: React.FC<LockingStatusProps> = ({
     getAvailableVotingPower,
   } = useTokenLockStore();
 
+  const account = getAccount(config);
+
   // Fetch user locks when component mounts or address changes
   useEffect(() => {
-    if (address) {
-      fetchUserLocks(address);
+    if (account.address) {
+      fetchUserLocks(account.address);
     }
-  }, [address, fetchUserLocks]);
+  }, [account.address]);
 
   const formatTokenAmount = (amount: bigint): string => {
     return (Number(amount) / 1e18).toLocaleString(undefined, {
@@ -124,13 +128,13 @@ export const LockingStatus: React.FC<LockingStatusProps> = ({
 
   // Fetch voting power when component mounts
   React.useEffect(() => {
-    if (address) {
+    if (account.address) {
       useTokenLockStore
         .getState()
-        .getAvailableVotingPower(address)
+        .getAvailableVotingPower(account.address)
         .then(setTotalVotingPower);
     }
-  }, [address, userLocks]);
+  }, [account.address, userLocks]);
 
   const hasLocks = userLocks.length > 0;
 

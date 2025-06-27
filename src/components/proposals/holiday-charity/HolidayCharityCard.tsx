@@ -9,16 +9,17 @@ import {
   TrendingUp,
   Calendar,
   DollarSign,
+  Award,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui';
 import AnimatedCard from '@/components/ui/AnimatedCard';
 import { SimpleTooltip } from '@/components/ui/AnimatedTooltip';
 import { ProposalTypeIndicator } from '../shared/ProposalTypeIndicator';
-import { fadeInVariants } from '@/lib/animations';
+import { fadeInVariants, slideUpVariants } from '@/lib/animations';
 import { HolidayCharityProposal, Charity } from '@/types';
 import { useCharityStore } from '@/stores/useCharityStore';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrencySafe } from '@/lib/utils';
 import { useWalletConnection } from '@/hooks/useWalletConnection';
 import { useProposalStore } from '@/stores/useProposalStore';
 
@@ -187,7 +188,7 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
               </span>
             </div>
             <span className="text-2xl font-bold text-patriotWhite">
-              ${proposal.fundAmount.toLocaleString()}
+              ${formatCurrencySafe(proposal.fundAmount)}
             </span>
           </div>
           <p className="text-xs text-textSecondary mt-1">

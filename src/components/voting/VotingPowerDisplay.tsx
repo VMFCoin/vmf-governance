@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { VotingPowerBreakdown, TokenLock } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatNumberSafe } from '@/lib/utils';
 import { fadeInVariants, slideUpVariants } from '@/lib/animations';
 
 interface VotingPowerDisplayProps {
@@ -52,7 +52,7 @@ export const VotingPowerDisplay: React.FC<VotingPowerDisplayProps> = ({
   >('current');
 
   const formatTokenAmount = (amount: bigint): string => {
-    return (Number(amount) / 1e18).toLocaleString(undefined, {
+    return formatNumberSafe(Number(amount) / 1e18, {
       maximumFractionDigits: 2,
     });
   };

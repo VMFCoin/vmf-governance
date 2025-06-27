@@ -98,7 +98,7 @@ export default function TokenLockingPage() {
     if (isConnected && address) {
       fetchUserLocks(address);
     }
-  }, [isConnected, address, fetchUserLocks]);
+  }, [isConnected, address]);
 
   return (
     <div className="min-h-screen bg-backgroundPrimary">

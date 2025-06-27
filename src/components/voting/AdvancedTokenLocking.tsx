@@ -153,7 +153,7 @@ export const AdvancedTokenLocking: React.FC<AdvancedTokenLockingProps> = ({
     if (isConnected && address) {
       fetchUserLocks(address);
     }
-  }, [isConnected, address, fetchUserLocks]);
+  }, [isConnected, address]);
 
   useEffect(() => {
     analyzePortfolio();

@@ -29,7 +29,7 @@ export default function ExitQueuePage() {
     if (isConnected && address) {
       fetchUserLocks(address);
     }
-  }, [isConnected, address, fetchUserLocks]);
+  }, [isConnected, address]);
 
   const handleTokenSelect = (tokenId: number) => {
     setSelectedTokenId(tokenId);

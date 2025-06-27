@@ -236,24 +236,27 @@ export function useNFTLocks(): UseNFTLocksReturn {
     ]
   );
 
-  // Refresh locks
-  const refreshLocks = useCallback(async () => {
-    const account = getAccount(config);
-    if (!account.address) return;
+  // Load locks on mount and when transfer status changes
+  useEffect(() => {
+    async function loadLocks() {
+      const account = getAccount(config);
+      if (!account.address) return;
 
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      await checkTransferStatus();
-      const userLocks = await fetchUserLocks(account.address);
-      setLocks(userLocks);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
+      try {
+        const userLocks = await fetchUserLocks(account.address);
+        setLocks(userLocks);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [checkTransferStatus, fetchUserLocks]);
+
+    loadLocks();
+  }, [checkTransferStatus]); // Removed fetchUserLocks from dependencies
 
   // Create a new lock
   const createLock = useCallback(
@@ -484,11 +487,6 @@ export function useNFTLocks(): UseNFTLocksReturn {
     BigInt(0)
   );
 
-  // Initialize on mount
-  useEffect(() => {
-    refreshLocks();
-  }, [refreshLocks]);
-
   // Set up event listeners for real-time updates
   useEffect(() => {
     const account = getAccount(config);
@@ -513,6 +511,24 @@ export function useNFTLocks(): UseNFTLocksReturn {
       unsubscribeWithdraw();
     };
   }, [votingEscrowAddress, refreshLocks]);
+
+  const refreshLocks = useCallback(async () => {
+    const account = getAccount(config);
+    if (!account.address) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await checkTransferStatus();
+      const userLocks = await fetchUserLocks(account.address);
+      setLocks(userLocks);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [checkTransferStatus, fetchUserLocks]);
 
   return {
     locks,

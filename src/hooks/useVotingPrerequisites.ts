@@ -70,7 +70,7 @@ export const useVotingPrerequisites = (
   );
   const [warmupTimeRemaining, setWarmupTimeRemaining] = useState<number>(0);
 
-  // Auto-refresh data
+  // Auto-refresh user locks if enabled
   useEffect(() => {
     if (!autoRefresh || !isConnected || !address) return;
 
@@ -79,7 +79,7 @@ export const useVotingPrerequisites = (
     }, refreshInterval);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, isConnected, address, refreshInterval, fetchUserLocks]);
+  }, [autoRefresh, isConnected, address, refreshInterval]);
 
   // Update status when dependencies change
   useEffect(() => {

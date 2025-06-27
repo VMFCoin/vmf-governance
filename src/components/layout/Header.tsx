@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { SecureConnectWallet } from '../wallet/SecureConnectWallet';
 import { HydrationBoundary } from './HydrationBoundary';
 import { useWalletSync } from '@/hooks/useWalletSync';
+import { useProfile } from '@/hooks/useProfile';
 
 interface HeaderProps {
   className?: string;
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { isConnected, address } = useWalletSync();
+  const { createProfile } = useProfile();
   const [showCreateProfileModal, setShowCreateProfileModal] = useState(false);
 
   const navItems = [
@@ -33,6 +35,24 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
   const handleCreateProfile = () => {
     setShowCreateProfileModal(true);
+  };
+
+  const handleCreateProfileSubmit = async (data: {
+    displayName: string;
+    avatarUrl?: string;
+  }) => {
+    try {
+      console.log('Creating profile with data:', data);
+      await createProfile({
+        name: data.displayName,
+        avatarUrl: data.avatarUrl,
+      });
+      console.log('Profile created successfully');
+      setShowCreateProfileModal(false);
+    } catch (error) {
+      console.error('Failed to create profile in Header:', error);
+      throw error;
+    }
   };
 
   const handleViewProfile = () => {
@@ -116,6 +136,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
         <CreateProfileModal
           isOpen={showCreateProfileModal}
           onClose={() => setShowCreateProfileModal(false)}
+          onCreateProfile={handleCreateProfileSubmit}
         />
       )}
     </>

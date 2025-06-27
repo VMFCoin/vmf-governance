@@ -108,11 +108,18 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
 
   const handleCreateProfile = async () => {
     try {
+      console.log('Modal: Starting profile creation...', {
+        displayName: displayName.trim(),
+        avatarUrl: avatarUrl || undefined,
+      });
       setIsCreating(true);
       await onCreateProfile({
         displayName: displayName.trim(),
         avatarUrl: avatarUrl || undefined,
       });
+      console.log(
+        'Modal: Profile created successfully, moving to complete step'
+      );
       setCurrentStep('complete');
 
       // Auto-close after success
@@ -120,9 +127,9 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
         onClose();
       }, 2000);
     } catch (error) {
-      console.error('Failed to create profile:', error);
-      // Handle error - could show error state
-    } finally {
+      console.error('Modal: Failed to create profile:', error);
+      // TODO: Show error state to user instead of just logging
+      // For now, reset the creating state so user can try again
       setIsCreating(false);
     }
   };

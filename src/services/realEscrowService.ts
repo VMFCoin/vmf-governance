@@ -370,6 +370,8 @@ export class RealEscrowService {
         args: [address],
       });
 
+      console.log('tokenIds', tokenIds);
+
       const tokenIdArray = tokenIds as bigint[];
       return tokenIdArray.map(id => Number(id));
     } catch (error) {
@@ -441,8 +443,14 @@ export class RealEscrowService {
   async getUserVotingPowerBreakdown(
     userAddress: `0x${string}`
   ): Promise<ExtendedVotingPowerBreakdown> {
+    console.log(
+      'RealEscrowService: getUserVotingPowerBreakdown called for:',
+      userAddress
+    );
     try {
       const tokenIds = await this.getUserTokens(userAddress as Address);
+      console.log('RealEscrowService: User token IDs:', tokenIds);
+
       const locks: ExtendedLockInfo[] = [];
 
       let totalLocked = BigInt(0);
@@ -453,14 +461,29 @@ export class RealEscrowService {
       let activeCount = 0;
 
       for (const tokenId of tokenIds) {
+        console.log('RealEscrowService: Processing token ID:', tokenId);
         const lockInfo = await this.getLockInfo(tokenId);
         if (lockInfo && lockInfo.amount > BigInt(0)) {
+          console.log(
+            'RealEscrowService: Lock info for token',
+            tokenId,
+            ':',
+            lockInfo
+          );
+
           // Check warmup status from curve contract
           const isWarm = await this.isTokenWarm(BigInt(tokenId));
+          console.log('RealEscrowService: Token', tokenId, 'is warm:', isWarm);
 
           // Get voting power (will be 0 during warmup)
           const votingPower = await this.getTokenVotingPowerFromCurve(
             BigInt(tokenId)
+          );
+          console.log(
+            'RealEscrowService: Token',
+            tokenId,
+            'voting power:',
+            votingPower
           );
 
           // Get warmup period info
@@ -493,15 +516,17 @@ export class RealEscrowService {
             activeVotingPower += votingPower;
             activeLocked += lockInfo.amount;
             activeCount++;
+            console.log('RealEscrowService: Token', tokenId, 'is ACTIVE');
           } else {
             // Lock is in warmup
             warmingUpLocked += lockInfo.amount;
             warmingUpCount++;
+            console.log('RealEscrowService: Token', tokenId, 'is WARMING UP');
           }
         }
       }
 
-      return {
+      const result = {
         totalLocked,
         totalVotingPower: activeVotingPower, // Only active locks have voting power
         activeVotingPower,
@@ -511,8 +536,14 @@ export class RealEscrowService {
         activeCount,
         locks,
       } as ExtendedVotingPowerBreakdown;
+
+      console.log('RealEscrowService: Final result:', result);
+      return result;
     } catch (error) {
-      console.error('Error fetching user voting power breakdown:', error);
+      console.error(
+        'RealEscrowService: Error fetching user voting power breakdown:',
+        error
+      );
       throw new Error('Failed to get user voting power breakdown');
     }
   }

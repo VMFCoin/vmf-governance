@@ -14,9 +14,10 @@ import { DEPLOYED_CONTRACTS } from '@/contracts/addresses';
 interface TokenLockState {
   // Data
   userLocks: TokenLock[];
-  votingPowerBreakdown: VotingPowerBreakdown | null;
+  votingPowerBreakdown: ExtendedVotingPowerBreakdown | null;
   isLoading: boolean;
   error: string | null;
+  lastFetchTime: number;
 
   // Token balance and allowance
   tokenBalance: bigint;
@@ -92,14 +93,44 @@ export const useTokenLockStore = create<TokenLockState>()(
       error: null,
       tokenBalance: BigInt(0),
       escrowAllowance: BigInt(0),
+      lastFetchTime: 0,
 
       // Actions
       fetchUserLocks: async (address: string) => {
-        set({ isLoading: true, error: null });
+        console.log(
+          'TokenLockStore: fetchUserLocks called for address:',
+          address
+        );
+
+        const currentTime = Date.now();
+        const { lastFetchTime } = get();
+
+        // Prevent rapid consecutive calls (debounce for 1 second)
+        if (currentTime - lastFetchTime < 1000) {
+          console.log('TokenLockStore: Skipping fetch due to debounce');
+          return;
+        }
+
+        set({ isLoading: true, error: null, lastFetchTime: currentTime });
+
         try {
+          console.log(
+            'TokenLockStore: Calling realEscrowService.getUserVotingPowerBreakdown...'
+          );
           // Use the realEscrowService method that returns the complete breakdown
           const breakdown = await realEscrowService.getUserVotingPowerBreakdown(
             address as `0x${string}`
+          );
+
+          console.log('TokenLockStore: Raw breakdown received:', breakdown);
+          console.log(
+            'TokenLockStore: Breakdown locks count:',
+            breakdown.locks?.length || 0
+          );
+          console.log('TokenLockStore: Active count:', breakdown.activeCount);
+          console.log(
+            'TokenLockStore: Warming up count:',
+            breakdown.warmingUpCount
           );
 
           // Calculate power used in voting (using mock service for now as gauge voting isn't implemented yet)
@@ -134,27 +165,26 @@ export const useTokenLockStore = create<TokenLockState>()(
           });
 
           const convertedLocks = breakdown.locks.map(convertToTokenLock);
+          console.log('TokenLockStore: Converted locks:', convertedLocks);
 
-          const votingPowerBreakdown: VotingPowerBreakdown = {
-            totalLocked: breakdown.totalLocked,
-            totalVotingPower: breakdown.totalVotingPower,
-            activeVotingPower: breakdown.activeVotingPower,
-            warmingUpLocked: breakdown.warmingUpLocked,
-            warmingUpCount: breakdown.warmingUpCount,
-            activeLocked: breakdown.activeLocked,
-            activeCount: breakdown.activeCount,
-            locks: convertedLocks,
-            powerUsed,
-            powerAvailable: breakdown.totalVotingPower - powerUsed,
-          };
+          // Store the ExtendedVotingPowerBreakdown directly (not the legacy VotingPowerBreakdown)
+          console.log('TokenLockStore: Setting breakdown in state:', breakdown);
 
           set({
             userLocks: convertedLocks,
-            votingPowerBreakdown,
+            votingPowerBreakdown: breakdown, // Store the ExtendedVotingPowerBreakdown directly
             isLoading: false,
           });
+
+          console.log('TokenLockStore: State updated successfully');
+          console.log('TokenLockStore: Final state check:', {
+            userLocksCount: convertedLocks.length,
+            votingPowerBreakdown: breakdown,
+            hasActiveLocks: breakdown.activeCount > 0,
+            hasWarmingUpLocks: breakdown.warmingUpCount > 0,
+          });
         } catch (error) {
-          console.error('Error fetching user locks:', error);
+          console.error('TokenLockStore: Error fetching user locks:', error);
           set({
             error:
               error instanceof Error
@@ -166,49 +196,101 @@ export const useTokenLockStore = create<TokenLockState>()(
       },
 
       fetchTokenBalance: async (address: string) => {
+        console.log(
+          'TokenLockStore: fetchTokenBalance called for address:',
+          address
+        );
         try {
           const balance = await realTokenService.getBalance(
             address as `0x${string}`
           );
+          console.log('TokenLockStore: Token balance fetched:', balance);
           set({ tokenBalance: balance });
         } catch (error) {
-          console.error('Error fetching token balance:', error);
+          console.error('TokenLockStore: Error fetching token balance:', error);
         }
       },
 
       fetchEscrowAllowance: async (address: string) => {
+        console.log(
+          'TokenLockStore: fetchEscrowAllowance called for address:',
+          address
+        );
         try {
           const allowance = await realTokenService.getAllowance(
             address as `0x${string}`,
             ESCROW_ADDRESS
           );
+          console.log('TokenLockStore: Escrow allowance fetched:', allowance);
           set({ escrowAllowance: allowance });
         } catch (error) {
-          console.error('Error fetching escrow allowance:', error);
+          console.error(
+            'TokenLockStore: Error fetching escrow allowance:',
+            error
+          );
         }
       },
 
       getAvailableVotingPower: async (address: string) => {
+        console.log(
+          'TokenLockStore: getAvailableVotingPower called for address:',
+          address
+        );
         const breakdown = get().votingPowerBreakdown;
         if (!breakdown) {
+          console.log(
+            'TokenLockStore: No breakdown available, fetching user locks...'
+          );
           await get().fetchUserLocks(address);
-          return get().votingPowerBreakdown?.powerAvailable || BigInt(0);
+          const newBreakdown = get().votingPowerBreakdown;
+          console.log(
+            'TokenLockStore: Available voting power:',
+            newBreakdown?.totalVotingPower || BigInt(0)
+          );
+          return newBreakdown?.totalVotingPower || BigInt(0);
         }
-        return breakdown.powerAvailable;
+        console.log(
+          'TokenLockStore: Available voting power from cache:',
+          breakdown.totalVotingPower
+        );
+        return breakdown.totalVotingPower;
       },
 
       getTotalVotingPower: async (address: string) => {
+        console.log(
+          'TokenLockStore: getTotalVotingPower called for address:',
+          address
+        );
         const breakdown = get().votingPowerBreakdown;
         if (!breakdown) {
+          console.log(
+            'TokenLockStore: No breakdown available, fetching user locks...'
+          );
           await get().fetchUserLocks(address);
-          return get().votingPowerBreakdown?.totalVotingPower || BigInt(0);
+          const newBreakdown = get().votingPowerBreakdown;
+          console.log(
+            'TokenLockStore: Total voting power after fetch:',
+            newBreakdown?.totalVotingPower || BigInt(0)
+          );
+          return newBreakdown?.totalVotingPower || BigInt(0);
         }
+        console.log(
+          'TokenLockStore: Total voting power from cache:',
+          breakdown.totalVotingPower
+        );
         return breakdown.totalVotingPower;
       },
 
       hasVotingPower: async (address: string) => {
         const totalPower = await get().getTotalVotingPower(address);
-        return totalPower > BigInt(0);
+        const hasVP = totalPower > BigInt(0);
+        console.log(
+          'TokenLockStore: hasVotingPower result:',
+          hasVP,
+          'for power:',
+          totalPower
+        );
+        return hasVP;
       },
 
       checkWarmupStatus: async (tokenId: number) => {
@@ -236,6 +318,10 @@ export const useTokenLockStore = create<TokenLockState>()(
       clearError: () => set({ error: null }),
 
       refreshUserData: async (address: string) => {
+        console.log(
+          'TokenLockStore: refreshUserData called for address:',
+          address
+        );
         // Add delay to prevent rate limiting
         const delay = (ms: number) =>
           new Promise(resolve => setTimeout(resolve, ms));
@@ -249,8 +335,9 @@ export const useTokenLockStore = create<TokenLockState>()(
           await delay(100);
 
           await get().fetchEscrowAllowance(address);
+          console.log('TokenLockStore: refreshUserData completed successfully');
         } catch (error) {
-          console.error('Error refreshing user data:', error);
+          console.error('TokenLockStore: Error refreshing user data:', error);
         }
       },
 

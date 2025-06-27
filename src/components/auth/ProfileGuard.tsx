@@ -7,6 +7,8 @@ import { CreateProfileModal } from '@/components/profile/CreateProfileModal';
 import { useProfile } from '@/hooks/useProfile';
 import { useWalletStore } from '@/stores/useWalletStore';
 import { useUserProfileStore } from '@/stores/useUserProfileStore';
+import { getAccount } from '@wagmi/core';
+import { config } from '@/lib/wagmi';
 
 interface ProfileGuardProps {
   children: React.ReactNode;
@@ -20,7 +22,7 @@ export function ProfileGuard({
   fallbackMessage = 'You need a profile to participate in governance activities.',
 }: ProfileGuardProps) {
   const { isConnected, address } = useWalletStore();
-  const { profile, isLoading, hasProfile } = useProfile();
+  const { profile, isLoading, hasProfile, createProfile } = useProfile();
   const { fetchProfileIfNeeded } = useUserProfileStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -30,6 +32,25 @@ export function ProfileGuard({
       fetchProfileIfNeeded(address);
     }
   }, [isConnected, address, fetchProfileIfNeeded]);
+
+  const handleCreateProfile = async (data: {
+    displayName: string;
+    avatarUrl?: string;
+  }) => {
+    try {
+      console.log('Creating profile with data:', data);
+      await createProfile({
+        name: data.displayName,
+        avatarUrl: data.avatarUrl,
+      });
+      console.log('Profile created successfully');
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error('Failed to create profile in ProfileGuard:', error);
+      // Re-throw the error so the modal can handle it
+      throw error;
+    }
+  };
 
   // Show loading state
   if (isLoading) {
@@ -88,6 +109,7 @@ export function ProfileGuard({
         <CreateProfileModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
+          onCreateProfile={handleCreateProfile}
         />
       </>
     );
