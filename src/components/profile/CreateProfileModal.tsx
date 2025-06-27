@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AvatarUpload } from './AvatarUpload';
+import { useProfile } from '@/hooks/useProfile';
 
 interface CreateProfileModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
   onCreateProfile,
   isLoading = false,
 }) => {
+  const { uploadAvatar } = useProfile();
   const [currentStep, setCurrentStep] = useState<Step>('name');
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -93,14 +95,20 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
   const handleAvatarUpload = async (file: File): Promise<string> => {
     try {
       setUploadError(null);
-      // Simulate upload - replace with actual upload logic
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const mockUrl = URL.createObjectURL(file);
-      setAvatarUrl(mockUrl);
-      return mockUrl;
+      console.log('Modal: Starting avatar upload to Supabase...', {
+        fileName: file.name,
+        fileSize: file.size,
+      });
+
+      const supabaseUrl = await uploadAvatar(file);
+      console.log('Modal: Avatar uploaded successfully:', supabaseUrl);
+
+      setAvatarUrl(supabaseUrl);
+      return supabaseUrl;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Upload failed';
+      console.error('Modal: Avatar upload failed:', error);
       setUploadError(errorMessage);
       throw error;
     }

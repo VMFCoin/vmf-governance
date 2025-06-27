@@ -258,6 +258,25 @@ export function useNFTLocks(): UseNFTLocksReturn {
     loadLocks();
   }, [checkTransferStatus]); // Removed fetchUserLocks from dependencies
 
+  // Define refreshLocks first to avoid circular dependency
+  const refreshLocks = useCallback(async () => {
+    const account = getAccount(config);
+    if (!account.address) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await checkTransferStatus();
+      const userLocks = await fetchUserLocks(account.address);
+      setLocks(userLocks);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [checkTransferStatus, fetchUserLocks]);
+
   // Create a new lock
   const createLock = useCallback(
     async (amount: bigint, duration: number): Promise<number> => {
@@ -511,24 +530,6 @@ export function useNFTLocks(): UseNFTLocksReturn {
       unsubscribeWithdraw();
     };
   }, [votingEscrowAddress, refreshLocks]);
-
-  const refreshLocks = useCallback(async () => {
-    const account = getAccount(config);
-    if (!account.address) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await checkTransferStatus();
-      const userLocks = await fetchUserLocks(account.address);
-      setLocks(userLocks);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [checkTransferStatus, fetchUserLocks]);
 
   return {
     locks,
