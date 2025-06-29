@@ -39,6 +39,7 @@ interface TokenLockState {
 
   // Utilities
   clearError: () => void;
+  clear: () => void;
   refreshUserData: (address: string) => Promise<void>;
 
   // New methods
@@ -101,6 +102,25 @@ export const useTokenLockStore = create<TokenLockState>()(
           'TokenLockStore: fetchUserLocks called for address:',
           address
         );
+
+        // Validate address format
+        if (
+          !address ||
+          address === '0x0' ||
+          address.length !== 42 ||
+          !address.startsWith('0x')
+        ) {
+          console.log(
+            'TokenLockStore: Invalid address provided, skipping fetch'
+          );
+          set({
+            userLocks: [],
+            votingPowerBreakdown: null,
+            isLoading: false,
+            error: null,
+          });
+          return;
+        }
 
         const currentTime = Date.now();
         const { lastFetchTime } = get();
@@ -200,6 +220,21 @@ export const useTokenLockStore = create<TokenLockState>()(
           'TokenLockStore: fetchTokenBalance called for address:',
           address
         );
+
+        // Validate address format
+        if (
+          !address ||
+          address === '0x0' ||
+          address.length !== 42 ||
+          !address.startsWith('0x')
+        ) {
+          console.log(
+            'TokenLockStore: Invalid address provided, skipping token balance fetch'
+          );
+          set({ tokenBalance: BigInt(0) });
+          return;
+        }
+
         try {
           const balance = await realTokenService.getBalance(
             address as `0x${string}`
@@ -216,6 +251,21 @@ export const useTokenLockStore = create<TokenLockState>()(
           'TokenLockStore: fetchEscrowAllowance called for address:',
           address
         );
+
+        // Validate address format
+        if (
+          !address ||
+          address === '0x0' ||
+          address.length !== 42 ||
+          !address.startsWith('0x')
+        ) {
+          console.log(
+            'TokenLockStore: Invalid address provided, skipping escrow allowance fetch'
+          );
+          set({ escrowAllowance: BigInt(0) });
+          return;
+        }
+
         try {
           const allowance = await realTokenService.getAllowance(
             address as `0x${string}`,
@@ -316,6 +366,17 @@ export const useTokenLockStore = create<TokenLockState>()(
       },
 
       clearError: () => set({ error: null }),
+
+      clear: () =>
+        set({
+          userLocks: [],
+          votingPowerBreakdown: null,
+          isLoading: false,
+          error: null,
+          tokenBalance: BigInt(0),
+          escrowAllowance: BigInt(0),
+          lastFetchTime: 0,
+        }),
 
       refreshUserData: async (address: string) => {
         console.log(

@@ -26,6 +26,7 @@ import {
 import { HolidayCharityVoting } from '@/components/voting/HolidayCharityVoting';
 import { useProposalStore } from '@/stores/useProposalStore';
 import { Proposal, HolidayCharityProposal } from '@/types';
+import { cn } from '@/lib/utils';
 
 export default function ProposalDetailPage() {
   const params = useParams();
@@ -51,23 +52,26 @@ export default function ProposalDetailPage() {
 
   if (!proposal) {
     return (
-      <main className="min-h-screen landing-page-flag">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Card className="text-center py-12">
-            <h1 className="text-2xl font-bold text-patriotWhite mb-4">
+        <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="text-center py-12 sm:py-16">
+            <h1 className="text-xl sm:text-2xl font-bold text-white mb-4">
               Proposal Not Found
             </h1>
-            <p className="text-textSecondary mb-6">
-              The proposal you're looking for doesn't exist.
+            <p className="text-sm sm:text-base text-slate-400 mb-6 sm:mb-8">
+              The proposal you're looking for doesn't exist or has been removed.
             </p>
-            <Button asChild>
-              <Link href="/vote">Back to Proposals</Link>
-            </Button>
-          </Card>
-        </div>
-        <Footer />
-      </main>
+            <Link
+              href="/vote"
+              className="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base font-medium rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Proposals
+            </Link>
+          </div>
+        </main>
+      </div>
     );
   }
 
@@ -139,478 +143,283 @@ export default function ProposalDetailPage() {
     : 0;
 
   return (
-    <main className="min-h-screen landing-page-flag">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Header />
-      <ToastContainer />
+      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Breadcrumb - Responsive */}
+        <div className="mb-6 sm:mb-8">
+          <Link
+            href="/vote"
+            className="inline-flex items-center text-sm sm:text-base text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Proposals
+          </Link>
+        </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <Link
-          href="/vote"
-          className="inline-flex items-center text-patriotRed hover:text-red-400 mb-8 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Proposals
-        </Link>
-
-        {/* Holiday Charity Proposal Layout */}
+        {/* Holiday Charity Proposals - Fully Responsive */}
         {isHolidayCharityProposal ? (
-          <div className="space-y-6">
-            {/* Compact Hero Section for Holiday Charity */}
-            <div className="relative overflow-hidden rounded-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-patriotRed/5 via-patriotBlue/5 to-starGold/5" />
-
-              <Card className="relative bg-white/5 backdrop-blur-sm border-white/10 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    {getStatusIcon(proposal.status)}
-                    <span
-                      className={`px-3 py-1 rounded-lg text-sm font-medium ${getStatusColor(proposal.status)}`}
-                    >
-                      {proposal.status.charAt(0).toUpperCase() +
-                        proposal.status.slice(1)}
-                    </span>
-                    <div className="px-3 py-1 bg-starGold/20 text-starGold rounded-lg text-sm font-medium border border-starGold/30">
-                      Holiday Charity
-                    </div>
+          <div className="space-y-6 sm:space-y-8">
+            {/* Main Proposal Card - Responsive */}
+            <Card className="p-4 sm:p-6 lg:p-8 bg-slate-800/50 border-slate-700">
+              <div className="space-y-4 sm:space-y-6">
+                {/* Status Badge - Responsive */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                  <div
+                    className={cn(
+                      'inline-flex items-center px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium',
+                      proposal.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : proposal.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-slate-100 text-slate-800'
+                    )}
+                  >
+                    {proposal.status}
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-400 mb-1">
-                      Proposal #{proposal.id}
-                    </p>
-                    <div className="flex items-center space-x-2 text-patriotRed font-medium">
-                      <Clock className="w-4 h-4" />
-                      <span>{proposal.timeLeft}</span>
-                    </div>
+                  <div className="text-xs sm:text-sm text-slate-400">
+                    Proposal ID: {proposal.id}
                   </div>
                 </div>
 
-                <h1 className="text-3xl font-display font-bold text-white mb-3 tracking-tight">
-                  {proposal.title}
-                </h1>
+                {/* Title and Author - Responsive */}
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">
+                    {proposal.title}
+                  </h1>
+                  <p className="text-sm sm:text-base text-slate-400">
+                    Proposed by{' '}
+                    <span className="text-white font-medium">
+                      {proposal.author}
+                    </span>
+                  </p>
+                </div>
 
-                <div className="flex items-center space-x-6 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Star className="w-4 h-4 text-starGold" />
-                    <span className="text-gray-300 text-sm">
-                      Proposed by {proposal.author}
-                    </span>
+                {/* Fund Amount - Responsive */}
+                <div className="bg-slate-700/30 rounded-lg p-3 sm:p-4">
+                  <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                    Total Fund Amount
                   </div>
-                  <div className="flex items-center space-x-2 text-starGold">
-                    <DollarSign className="w-4 h-4" />
-                    <span className="font-semibold text-sm">
-                      $
-                      {(
-                        proposal as HolidayCharityProposal
-                      ).fundAmount.toLocaleString()}{' '}
-                      Fund
-                    </span>
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-400">
+                    $
+                    {(
+                      proposal as HolidayCharityProposal
+                    ).fundAmount.toLocaleString()}
                   </div>
                 </div>
 
-                <p className="text-gray-300 leading-relaxed text-sm max-w-4xl">
-                  {proposal.description ||
-                    'Vote for which charity should receive funding for this holiday celebration. Your vote helps determine how community funds are allocated to support veteran-focused organizations.'}
-                </p>
-              </Card>
-            </div>
+                {/* Description - Responsive */}
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 sm:mb-3">
+                    Description
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                    {proposal.description ||
+                      'Vote for which charity should receive funding for this holiday celebration. Your vote helps determine how community funds are allocated to support veteran-focused organizations.'}
+                  </p>
+                </div>
+              </div>
+            </Card>
 
-            {/* Holiday Charity Voting Component */}
+            {/* Holiday Charity Voting Component - Already responsive */}
             <HolidayCharityVoting
               proposal={proposal as HolidayCharityProposal}
-              onVoteSubmitted={() => {
-                console.log('Holiday charity vote submitted');
-              }}
             />
 
-            {/* Compact Additional Information */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              {/* Proposal Details */}
-              <Card className="p-6 rounded-xl bg-white/5 border-white/10">
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <div className="w-8 h-8 bg-patriotBlue/20 rounded-lg flex items-center justify-center mr-3">
-                    <AlertCircle className="w-4 h-4 text-patriotBlue" />
+            {/* How It Works Section - Responsive */}
+            <Card className="p-4 sm:p-6 lg:p-8 bg-slate-800/50 border-slate-700">
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
+                How Holiday Charity Voting Works
+              </h2>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold flex-shrink-0">
+                    1
                   </div>
-                  How It Works
-                </h2>
-                <div className="space-y-3 text-gray-300 text-sm">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-starGold/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-starGold text-xs font-bold">1</span>
-                    </div>
-                    <p>
+                  <div>
+                    <h4 className="font-semibold text-white text-sm sm:text-base mb-1">
+                      Community Voting
+                    </h4>
+                    <p className="text-xs sm:text-sm text-slate-400">
                       Community members vote for their preferred charity from
-                      verified organizations
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-starGold/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-starGold text-xs font-bold">2</span>
-                    </div>
-                    <p>Voting power is determined by locked VMF tokens</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-starGold/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-starGold text-xs font-bold">3</span>
-                    </div>
-                    <p>
-                      The charity with the most votes receives the full fund
-                      allocation
-                    </p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-starGold/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-starGold text-xs font-bold">4</span>
-                    </div>
-                    <p>
-                      Funds are distributed transparently with full community
-                      oversight
+                      the curated list of veteran-focused organizations.
                     </p>
                   </div>
                 </div>
-              </Card>
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold flex-shrink-0">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white text-sm sm:text-base mb-1">
+                      Voting Power
+                    </h4>
+                    <p className="text-xs sm:text-sm text-slate-400">
+                      Your voting power is determined by the amount of VMF
+                      tokens you have locked in the governance system.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold flex-shrink-0">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white text-sm sm:text-base mb-1">
+                      Fund Distribution
+                    </h4>
+                    <p className="text-xs sm:text-sm text-slate-400">
+                      The charity with the most votes receives the allocated
+                      funds to support veterans in need.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
 
-              {/* Proposal Stats */}
-              <Card className="p-6 rounded-xl bg-white/5 border-white/10">
-                <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center mr-3">
-                    <Users className="w-4 h-4 text-green-400" />
-                  </div>
-                  Proposal Details
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400 text-sm">Type</span>
-                    <span className="text-white font-medium text-sm">
-                      Holiday Charity
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400 text-sm">Status</span>
-                    <span className="text-white font-medium text-sm capitalize">
-                      {proposal.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400 text-sm">
-                      Time Remaining
-                    </span>
-                    <span className="text-white font-medium text-sm">
-                      {proposal.timeLeft}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400 text-sm">Fund Amount</span>
-                    <span className="text-starGold font-bold text-sm">
-                      $
-                      {(
-                        proposal as HolidayCharityProposal
-                      ).fundAmount.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-gray-400 text-sm">
-                      Available Charities
-                    </span>
-                    <span className="text-white font-medium text-sm">
-                      {
-                        (proposal as HolidayCharityProposal).availableCharities
-                          .length
-                      }
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-gray-400 text-sm">Total Votes</span>
-                    <span className="text-white font-medium text-sm">
-                      {(proposal as HolidayCharityProposal).totalVotes}
-                    </span>
-                  </div>
+            {/* Proposal Stats - Responsive Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Type
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-white">
+                  Holiday Charity
+                </div>
+              </Card>
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Status
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-white">
+                  {proposal.status}
+                </div>
+              </Card>
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Time Remaining
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-white">
+                  {proposal.timeLeft}
+                </div>
+              </Card>
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Fund Amount
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-green-400">
+                  $
+                  {(
+                    proposal as HolidayCharityProposal
+                  ).fundAmount.toLocaleString()}
+                </div>
+              </Card>
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Available Charities
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-white">
+                  {
+                    (proposal as HolidayCharityProposal).availableCharities
+                      .length
+                  }
+                </div>
+              </Card>
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Total Votes
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-white">
+                  {(proposal as HolidayCharityProposal).totalVotes}
                 </div>
               </Card>
             </div>
           </div>
         ) : (
-          // Standard proposal layout for non-holiday charity proposals
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Proposal Header */}
-              <Card>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(proposal.status)}
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(proposal.status)}`}
-                    >
-                      {proposal.status.charAt(0).toUpperCase() +
-                        proposal.status.slice(1)}
+          /* Standard Proposals - Responsive */
+          <div className="space-y-6 sm:space-y-8">
+            <Card className="p-4 sm:p-6 lg:p-8 bg-slate-800/50 border-slate-700">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                  <div
+                    className={cn(
+                      'inline-flex items-center px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium',
+                      proposal.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : proposal.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-slate-100 text-slate-800'
+                    )}
+                  >
+                    {proposal.status}
+                  </div>
+                  <div className="text-xs sm:text-sm text-slate-400">
+                    Proposal ID: {proposal.id}
+                  </div>
+                </div>
+
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">
+                    {proposal.title}
+                  </h1>
+                  <p className="text-sm sm:text-base text-slate-400">
+                    Proposed by{' '}
+                    <span className="text-white font-medium">
+                      {proposal.author}
                     </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-textSecondary">
-                      Proposal #{proposal.id}
-                    </p>
-                    <p className="text-sm text-patriotRed font-medium">
-                      {proposal.timeLeft}
-                    </p>
-                  </div>
+                  </p>
                 </div>
 
-                <h1 className="text-3xl font-display font-bold text-patriotWhite mb-4">
-                  {proposal.title}
-                </h1>
-
-                <div className="flex items-center mb-6">
-                  <Star className="w-4 h-4 text-starGold mr-2" />
-                  <span className="text-textSecondary">
-                    Proposed by {proposal.author}
-                  </span>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 sm:mb-3">
+                    Description
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                    {proposal.description ||
+                      'No description provided for this proposal.'}
+                  </p>
                 </div>
+              </div>
+            </Card>
 
-                <p className="text-textBase leading-relaxed">
-                  {proposal.description ||
-                    'No description provided for this proposal.'}
-                </p>
-              </Card>
-
-              {/* Detailed Description */}
-              <Card>
-                <h2 className="text-xl font-semibold text-patriotWhite mb-4">
-                  Proposal Details
-                </h2>
-                <div className="prose prose-invert max-w-none">
-                  {/* Standard proposal details */}
-                  <div>
-                    <p className="text-textBase leading-relaxed mb-4">
-                      This proposal aims to support our veteran community
-                      through targeted initiatives and funding allocation. The
-                      proposed measures will directly impact veteran welfare and
-                      community support systems.
-                    </p>
-                    <h3 className="text-lg font-semibold text-patriotWhite mb-2">
-                      Key Points:
-                    </h3>
-                    <ul className="text-textBase space-y-2">
-                      <li>• Direct financial support for veteran families</li>
-                      <li>• Community outreach and engagement programs</li>
-                      <li>• Long-term sustainability and impact measurement</li>
-                      <li>• Transparent fund allocation and reporting</li>
-                    </ul>
-                    <h3 className="text-lg font-semibold text-patriotWhite mb-2 mt-6">
-                      Expected Impact:
-                    </h3>
-                    <p className="text-textBase">
-                      This initiative is expected to benefit over 1,000 veteran
-                      families directly and create lasting positive change in
-                      the veteran community through sustainable support systems.
-                    </p>
-                  </div>
+            {/* Standard Proposal Stats - Responsive Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Type
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-white">
+                  {proposal.type}
                 </div>
               </Card>
-
-              {/* Vote Results Visualization - Only for binary voting */}
-              <Card>
-                <h2 className="text-xl font-semibold text-patriotWhite mb-6">
-                  Vote Results Visualization
-                </h2>
-                <div className="flex justify-center">
-                  <VoteChart
-                    yesPercentage={proposal.yesPercentage}
-                    noPercentage={proposal.noPercentage}
-                    abstainPercentage={proposal.abstainPercentage}
-                    size="lg"
-                  />
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Status
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-white">
+                  {proposal.status}
                 </div>
               </Card>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Binary voting for other proposal types */}
-              <Card>
-                <h3 className="text-xl font-semibold text-patriotWhite mb-4">
-                  Cast Your Vote
-                </h3>
-
-                {hasVoted ? (
-                  <div className="text-center">
-                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                    <p className="text-patriotWhite font-medium mb-2">
-                      Vote Submitted!
-                    </p>
-                    <p className="text-textSecondary text-sm mb-4">
-                      You voted:{' '}
-                      <span className="capitalize font-medium">
-                        {userVote?.vote}
-                      </span>
-                    </p>
-                    <p className="text-xs text-textSecondary">
-                      Your vote has been recorded and cannot be changed.
-                    </p>
-                  </div>
-                ) : proposal.status === 'active' ? (
-                  <div className="space-y-3">
-                    <Button
-                      onClick={() => openVoteModal('yes')}
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      Vote Yes
-                    </Button>
-                    <Button
-                      onClick={() => openVoteModal('no')}
-                      variant="secondary"
-                      className="w-full"
-                    >
-                      Vote No
-                    </Button>
-                    <Button
-                      onClick={() => openVoteModal('abstain')}
-                      variant="secondary"
-                      className="w-full bg-gray-600 hover:bg-gray-700"
-                    >
-                      Abstain
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-textSecondary">
-                      Voting is not available for this proposal
-                    </p>
-                  </div>
-                )}
-              </Card>
-
-              {/* Vote Results - Only for binary voting */}
-              <Card>
-                <h3 className="text-xl font-semibold text-patriotWhite mb-4">
-                  Current Results
-                </h3>
-
-                <div className="text-center mb-6">
-                  <VotingPower
-                    percentage={leadingPercentage}
-                    size="md"
-                    label={`${leadingVote} Leading`}
-                  />
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Votes For
                 </div>
-
-                <div className="space-y-4">
-                  {/* Yes Votes */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-green-400">Yes</span>
-                      <span className="text-patriotWhite">
-                        {proposal.yesPercentage}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-backgroundDark rounded-full h-2">
-                      <div
-                        className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${proposal.yesPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* No Votes */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-red-400">No</span>
-                      <span className="text-patriotWhite">
-                        {proposal.noPercentage}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-backgroundDark rounded-full h-2">
-                      <div
-                        className="bg-red-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${proposal.noPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Abstain Votes */}
-                  {proposal.abstainPercentage > 0 && (
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-400">Abstain</span>
-                        <span className="text-patriotWhite">
-                          {proposal.abstainPercentage}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-backgroundDark rounded-full h-2">
-                        <div
-                          className="bg-gray-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${proposal.abstainPercentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-patriotBlue/30">
-                  <div className="flex items-center justify-between text-sm text-textSecondary">
-                    <div className="flex items-center">
-                      <Users className="w-4 h-4 mr-1" />
-                      <span>Total Participation</span>
-                    </div>
-                    <span>{totalVotes}%</span>
-                  </div>
+                <div className="text-sm sm:text-base font-semibold text-green-400">
+                  {proposal.yesPercentage}%
                 </div>
               </Card>
-
-              {/* Proposal Stats */}
-              <Card>
-                <h3 className="text-xl font-semibold text-patriotWhite mb-4">
-                  Proposal Stats
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Type</span>
-                    <span className="text-patriotWhite capitalize">
-                      {proposal.type.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Status</span>
-                    <span className="text-patriotWhite capitalize">
-                      {proposal.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Time Remaining</span>
-                    <span className="text-patriotWhite">
-                      {proposal.timeLeft}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Proposed By</span>
-                    <span className="text-patriotWhite">{proposal.author}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-textSecondary">Proposal ID</span>
-                    <span className="text-patriotWhite">#{proposal.id}</span>
-                  </div>
+              <Card className="p-3 sm:p-4 bg-slate-800/50 border-slate-700">
+                <div className="text-xs sm:text-sm text-slate-400 mb-1">
+                  Votes Against
+                </div>
+                <div className="text-sm sm:text-base font-semibold text-red-400">
+                  {proposal.noPercentage}%
                 </div>
               </Card>
             </div>
           </div>
         )}
-      </div>
-
-      {/* Vote Modal - Only for binary voting */}
-      {!isHolidayCharityProposal && (
-        <VoteModal
-          isOpen={showVoteModal}
-          onClose={() => {
-            setShowVoteModal(false);
-            setSelectedVote(null);
-          }}
-          onVote={handleBinaryVote}
-          proposalTitle={proposal.title}
-          selectedVote={selectedVote}
-        />
-      )}
-
-      <Footer />
-    </main>
+      </main>
+    </div>
   );
 }

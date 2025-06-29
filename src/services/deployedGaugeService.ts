@@ -192,10 +192,19 @@ export class DeployedGaugeService {
   ): Promise<DeployedGaugeInfo[]> {
     try {
       const holidayGauges = await this.getGaugesByType('holiday_charity');
-      return holidayGauges.filter(gauge => {
+      const filtered = holidayGauges.filter(gauge => {
         const metadata = this.parseGaugeMetadata(gauge.metadataURI);
         return metadata?.holidayId === holidayId;
       });
+
+      // Fix: Log when no gauges are found
+      if (filtered.length === 0) {
+        console.warn(
+          `No deployed gauges found for holiday ${holidayId}. This may be expected for mock/demo proposals.`
+        );
+      }
+
+      return filtered;
     } catch (error) {
       console.error('Error getting holiday charity gauges:', error);
       throw new Error(`Failed to get holiday charity gauges for ${holidayId}`);
@@ -266,16 +275,19 @@ export class DeployedGaugeService {
         BigInt(0)
       );
 
-      // Find leading charity
-      const leadingCharity = charityMappings.reduce((leader, current) =>
-        current.votes > leader.votes ? current : leader
-      );
+      // Fix: Handle empty array case for leading charity
+      const leadingCharity =
+        charityMappings.length > 0
+          ? charityMappings.reduce((leader, current) =>
+              current.votes > leader.votes ? current : leader
+            )
+          : undefined;
 
       return {
         holidayId,
         totalVotes,
         charityMappings,
-        leadingCharity: charityMappings.length > 0 ? leadingCharity : undefined,
+        leadingCharity,
         votingComplete: false, // Would need additional logic to determine this
       };
     } catch (error) {

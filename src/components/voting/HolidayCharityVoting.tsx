@@ -93,9 +93,18 @@ export function HolidayCharityVoting({
   const [isVotingActive, setIsVotingActive] = useState(false);
   const [votingPeriodInfo, setVotingPeriodInfo] = useState<any>(null);
 
+  // Fix: Add state for controlling refresh behavior
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [isManualRefresh, setIsManualRefresh] = useState(false);
+
   // Real-time updates
   const [isSubscribed, setIsSubscribed] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Fix: Add ref to track if initialization is in progress to prevent multiple calls
+  const isInitializingRef = useRef(false);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Wallet connection
   const { address, isConnected } = useWalletConnection();
@@ -138,58 +147,101 @@ export function HolidayCharityVoting({
   const userVote = getUserVote(proposal.id);
   const hasVoted = hasVotedOnGauge || !!userVote;
 
-  // Initialize gauge mappings and voting data
-  const initializeGaugeData = useCallback(async () => {
-    if (!proposal?.availableCharities?.length || isLoadingGauges) return;
-
-    setIsLoadingGauges(true);
-    setGaugeError(null);
-
-    try {
-      // Get charity objects
-      const holidayCharities = proposal.availableCharities
-        .map(charityId => getCharityById(charityId))
-        .filter((charity): charity is Charity => charity !== null);
-
-      if (holidayCharities.length === 0) {
-        throw new Error('No valid charities found for this holiday');
+  // Fix: Stable initialize function with proper dependency management
+  const initializeGaugeData = useCallback(
+    async (isManualRefresh = false) => {
+      // Prevent multiple concurrent calls
+      if (isInitializingRef.current) {
+        console.log('Gauge initialization already in progress, skipping...');
+        return;
       }
 
-      // Create charity gauge mappings
-      const mappings =
-        await holidayCharityGaugeService.createCharityGaugeMappings(
-          proposal.id,
-          holidayCharities
+      if (!proposal?.availableCharities?.length) {
+        console.log(
+          'No proposal or charities available, skipping initialization'
         );
-      setCharityGaugeMappings(mappings);
+        return;
+      }
 
-      // Get voting results
-      const results = await holidayCharityGaugeService.getHolidayVotingResults(
-        proposal.id,
-        holidayCharities
-      );
-      setHolidayVotingResults(results);
+      isInitializingRef.current = true;
+      setIsLoadingGauges(true);
+      if (isManualRefresh) {
+        setIsManualRefresh(true);
+      }
+      setGaugeError(null);
 
-      // Check voting period status
-      const periodInfo = await holidayCharityGaugeService.getVotingPeriodInfo();
-      setVotingPeriodInfo(periodInfo);
-      setIsVotingActive(periodInfo.isActive);
+      try {
+        console.log('Initializing gauge data for proposal:', proposal.id);
 
-      console.log('Gauge data initialized:', { mappings, results, periodInfo });
-    } catch (error) {
-      console.error('Failed to initialize gauge data:', error);
-      setGaugeError(
-        error instanceof Error ? error.message : 'Failed to load voting data'
-      );
-    } finally {
-      setIsLoadingGauges(false);
-    }
-  }, [
-    proposal?.availableCharities,
-    proposal?.id,
-    getCharityById,
-    isLoadingGauges,
-  ]);
+        // Get charity objects
+        const holidayCharities = proposal.availableCharities
+          .map(charityId => getCharityById(charityId))
+          .filter((charity): charity is Charity => charity !== null);
+
+        if (holidayCharities.length === 0) {
+          throw new Error('No valid charities found for this holiday');
+        }
+
+        // Create charity gauge mappings
+        const mappings =
+          await holidayCharityGaugeService.createCharityGaugeMappings(
+            proposal.id,
+            holidayCharities
+          );
+        setCharityGaugeMappings(mappings);
+
+        // Only get voting results if mappings exist
+        if (mappings.length > 0) {
+          const results =
+            await holidayCharityGaugeService.getHolidayVotingResults(
+              proposal.id,
+              holidayCharities
+            );
+          setHolidayVotingResults(results);
+        } else {
+          // Set empty results for demo mode
+          setHolidayVotingResults({
+            holidayId: proposal.id,
+            totalVotes: BigInt(0),
+            charityMappings: [],
+            leadingCharity: undefined,
+            votingComplete: false,
+          });
+          console.warn(
+            `No deployed gauges found for holiday ${proposal.id}. This may be expected for mock/demo proposals.`
+          );
+        }
+
+        // Check voting period status
+        const periodInfo =
+          await holidayCharityGaugeService.getVotingPeriodInfo();
+        setVotingPeriodInfo(periodInfo);
+        setIsVotingActive(periodInfo.isActive);
+
+        // Update last refresh time
+        setLastRefreshTime(new Date());
+
+        console.log('Gauge data initialized successfully:', {
+          mappings: mappings.length,
+          periodInfo: periodInfo.isActive,
+        });
+      } catch (error) {
+        console.error('Failed to initialize gauge data:', error);
+        setGaugeError(
+          error instanceof Error ? error.message : 'Failed to load voting data'
+        );
+
+        // Set empty state to prevent retry loops
+        setCharityGaugeMappings([]);
+        setHolidayVotingResults(null);
+      } finally {
+        setIsLoadingGauges(false);
+        setIsManualRefresh(false);
+        isInitializingRef.current = false;
+      }
+    },
+    [proposal?.availableCharities, proposal?.id, getCharityById]
+  ); // Fix: Remove isLoadingGauges from dependencies to prevent infinite loop
 
   // Load user's voted gauges
   const loadUserVotedGauges = useCallback(async () => {
@@ -230,6 +282,12 @@ export function HolidayCharityVoting({
     [fetchUserLocks, getTotalVotingPower]
   );
 
+  // Fix: Manual refresh handler
+  const handleManualRefresh = useCallback(async () => {
+    console.log('Manual refresh triggered');
+    await initializeGaugeData(true);
+  }, [initializeGaugeData]);
+
   // CONSOLIDATED useEffect - fetch all required data
   useEffect(() => {
     // Fetch charities if not loaded
@@ -241,12 +299,35 @@ export function HolidayCharityVoting({
     }
   }, [isConnected, address, handleFetchCharities, handleFetchVotingPower]);
 
-  // Initialize gauge data when charities are loaded
+  // Fix: Initialize gauge data only once when charities are loaded
   useEffect(() => {
-    if (charities.length > 0 && !isLoadingGauges) {
+    if (charities.length > 0 && !isInitializingRef.current && !gaugeError) {
+      console.log('Charities loaded, initializing gauge data...');
       initializeGaugeData();
     }
-  }, [charities.length, initializeGaugeData, isLoadingGauges]);
+  }, [charities.length]); // Fix: Remove initializeGaugeData from dependencies
+
+  // Fix: Setup 15-minute auto-refresh interval
+  useEffect(() => {
+    if (!autoRefreshEnabled || !charityGaugeMappings.length) return;
+
+    console.log('Setting up 15-minute auto-refresh interval');
+
+    refreshIntervalRef.current = setInterval(
+      () => {
+        console.log('Auto-refresh triggered (15 minutes)');
+        initializeGaugeData();
+      },
+      15 * 60 * 1000
+    ); // 15 minutes
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [autoRefreshEnabled, charityGaugeMappings.length]); // Fix: Remove initializeGaugeData from dependencies
 
   // Load user voted gauges when token IDs are available
   useEffect(() => {
@@ -255,20 +336,25 @@ export function HolidayCharityVoting({
     }
   }, [userTokenIds, loadUserVotedGauges]);
 
-  // Subscribe to real-time voting events
+  // Fix: Subscribe to real-time voting events (remove from auto-refresh cycle)
   useEffect(() => {
     if (!isSubscribed && charityGaugeMappings.length > 0) {
       const unsubscribe = holidayCharityGaugeService.subscribeToVotingEvents(
         event => {
           console.log('Vote event received:', event);
 
-          // Refresh voting results when new votes come in
+          // Only refresh for relevant gauges and limit frequency
           if (
             charityGaugeMappings.some(
               mapping => mapping.gaugeAddress === event.gauge
             )
           ) {
-            initializeGaugeData();
+            // Debounce refresh calls to prevent spam
+            setTimeout(() => {
+              if (!isInitializingRef.current) {
+                initializeGaugeData();
+              }
+            }, 1000);
 
             // If it's the current user's vote, update their voted gauges
             if (
@@ -292,13 +378,7 @@ export function HolidayCharityVoting({
         setIsSubscribed(false);
       }
     };
-  }, [
-    isSubscribed,
-    charityGaugeMappings,
-    address,
-    initializeGaugeData,
-    loadUserVotedGauges,
-  ]);
+  }, [isSubscribed, charityGaugeMappings, address, loadUserVotedGauges]); // Fix: Remove initializeGaugeData from dependencies
 
   // Update total voting power when breakdown changes
   useEffect(() => {
@@ -317,12 +397,40 @@ export function HolidayCharityVoting({
 
   // Map charities with gauge voting data
   const availableCharities = useMemo(() => {
-    if (
-      !proposal?.availableCharities ||
-      charitiesLoading ||
-      !charityGaugeMappings.length
-    )
-      return [];
+    if (!proposal?.availableCharities || charitiesLoading) return [];
+
+    // Handle case when no gauge mappings exist (demo mode)
+    if (charityGaugeMappings.length === 0) {
+      // Fallback to basic charity data without gauge integration
+      return proposal.availableCharities
+        .map(charityId => {
+          const charity = getCharityById(charityId);
+          if (!charity) return null;
+
+          return {
+            ...charity,
+            votes: 0,
+            percentage: 0,
+            totalVotingPower: BigInt(0),
+            rank: 0,
+            gaugeAddress:
+              '0x0000000000000000000000000000000000000000' as Address,
+            gaugeMapping: null as CharityGaugeMapping | null,
+          };
+        })
+        .filter(
+          (
+            charity
+          ): charity is Charity & {
+            votes: number;
+            percentage: number;
+            totalVotingPower: bigint;
+            rank: number;
+            gaugeAddress: Address;
+            gaugeMapping: CharityGaugeMapping | null;
+          } => charity !== null
+        );
+    }
 
     return proposal.availableCharities
       .map(charityId => {
@@ -400,9 +508,18 @@ export function HolidayCharityVoting({
       return;
     }
 
-    const charity = availableCharities.find(c => c.id === charityId);
+    const charity = availableCharities.find(c => c?.id === charityId);
     if (!charity) {
       showError('Invalid Charity', 'Selected charity not found.');
+      return;
+    }
+
+    // Check if this is demo mode (no gauge mapping)
+    if (!charity.gaugeMapping) {
+      showError(
+        'Demo Mode',
+        'Real voting is not available for this proposal. This is a demonstration.'
+      );
       return;
     }
 
@@ -471,10 +588,31 @@ export function HolidayCharityVoting({
     }
   };
 
+  // Check if user has voted for a specific charity
+  const hasUserVotedForCharity = useCallback(
+    (charityId: string) => {
+      const charity = availableCharities.find(c => c?.id === charityId);
+      if (!charity || !charity.gaugeMapping) return false;
+
+      return userVotedGauges.includes(charity.gaugeAddress);
+    },
+    [availableCharities, userVotedGauges]
+  );
+
+  // Sort charities by vote percentage for results display
+  const sortedCharities = useMemo(() => {
+    return [...availableCharities]
+      .filter(charity => charity !== null)
+      .sort((a, b) => {
+        if (!a || !b) return 0;
+        return b.percentage - a.percentage;
+      });
+  }, [availableCharities]);
+
   // Get charity vote data for results display
   const getCharityVoteData = useCallback(
     (charityId: string) => {
-      const charity = availableCharities.find(c => c.id === charityId);
+      const charity = availableCharities.find(c => c?.id === charityId);
       return charity
         ? {
             votes: charity.votes,
@@ -487,23 +625,18 @@ export function HolidayCharityVoting({
     [availableCharities]
   );
 
-  // Sort charities by vote percentage for results display
-  const sortedCharities = useMemo(() => {
-    return [...availableCharities].sort((a, b) => {
-      return b.percentage - a.percentage;
-    });
-  }, [availableCharities]);
-
-  // Check if user has voted for a specific charity
-  const hasUserVotedForCharity = useCallback(
-    (charityId: string) => {
-      const charity = availableCharities.find(c => c.id === charityId);
-      if (!charity) return false;
-
-      return userVotedGauges.includes(charity.gaugeAddress);
-    },
-    [availableCharities, userVotedGauges]
-  );
+  // Early return if no proposal
+  if (!proposal) {
+    return (
+      <Card className="p-6">
+        <div className="text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Proposal Data</h3>
+          <p className="text-gray-600">Unable to load proposal information.</p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <ProfileGuard fallbackMessage="You need a profile to vote on holiday charity proposals.">
@@ -517,11 +650,11 @@ export function HolidayCharityVoting({
           whileHover={{ scale: 1.005 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          <Card className="relative bg-gradient-to-br from-patriotBlue/10 via-patriotRed/5 to-starGold/10 border-white/10 p-8 rounded-3xl shadow-2xl shadow-black/20 backdrop-blur-md">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5 rounded-3xl"></div>
-            <div className="relative text-center mb-8">
+          <Card className="relative bg-gradient-to-br from-patriotBlue/10 via-patriotRed/5 to-starGold/10 border-white/10 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl shadow-2xl shadow-black/20 backdrop-blur-md">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5 rounded-2xl sm:rounded-3xl"></div>
+            <div className="relative text-center mb-6 sm:mb-8">
               <motion.h1
-                className="text-4xl font-bold text-white mb-4 tracking-tight"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-4xl font-bold text-white mb-3 sm:mb-4 tracking-tight leading-tight"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -529,7 +662,7 @@ export function HolidayCharityVoting({
                 Veterans Day 2025 Fund Distribution
               </motion.h1>
               <motion.p
-                className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed"
+                className="text-base sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed px-2 sm:px-0"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -539,8 +672,8 @@ export function HolidayCharityVoting({
               </motion.p>
             </div>
 
-            {/* Key Metrics */}
-            <div className="grid grid-cols-3 gap-6">
+            {/* Key Metrics - Responsive grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               {[
                 {
                   icon: DollarSign,
@@ -572,7 +705,7 @@ export function HolidayCharityVoting({
                       : metric.color === 'patriotBlue'
                         ? 'from-patriotBlue/15 to-blue-500/15 border-patriotBlue/30'
                         : 'from-green-500/15 to-emerald-500/15 border-green-500/30'
-                  } border rounded-2xl p-6 text-center shadow-lg backdrop-blur-sm`}
+                  } border rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center shadow-lg backdrop-blur-sm`}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -587,172 +720,256 @@ export function HolidayCharityVoting({
                     transition={{ type: 'spring', stiffness: 400 }}
                   >
                     <metric.icon
-                      className={`w-8 h-8 ${
+                      className={`w-6 h-6 sm:w-8 sm:h-8 ${
                         metric.color === 'starGold'
                           ? 'text-starGold'
                           : metric.color === 'patriotBlue'
                             ? 'text-patriotBlue'
                             : 'text-green-400'
-                      } mx-auto mb-3`}
+                      } mx-auto mb-2 sm:mb-3`}
                     />
                   </motion.div>
-                  <div className="text-3xl font-bold text-white mb-2">
+                  <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1 sm:mb-2">
                     {metric.value}
                   </div>
-                  <div className="text-sm text-gray-400">{metric.label}</div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    {metric.label}
+                  </div>
                 </motion.div>
               ))}
             </div>
           </Card>
         </motion.div>
 
-        {/* Voting Status */}
-        <motion.div
-          variants={fadeInVariants}
-          initial="initial"
-          animate="enter"
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 border-slate-700/50 p-6 rounded-xl">
-            {/* Gauge loading or error state */}
-            {(isLoadingGauges || gaugeError) && (
-              <div className="mb-4 p-3 rounded-lg border">
-                {isLoadingGauges ? (
-                  <div className="flex items-center space-x-3 text-blue-400 border-blue-400/30 bg-blue-400/10">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Loading gauge data...</span>
+        {/* Fix: Enhanced Error Display for Missing Gauges */}
+        {gaugeError && (
+          <motion.div
+            variants={fadeInVariants}
+            initial="initial"
+            animate="enter"
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="p-4 sm:p-6">
+              <div className="text-center">
+                <AlertCircle className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-yellow-500 mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-semibold mb-2">
+                  Voting Data Unavailable
+                </h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-4 max-w-2xl mx-auto leading-relaxed">
+                  {gaugeError.includes('No deployed gauges') ||
+                  gaugeError.includes('Failed to map charities to gauges')
+                    ? 'This proposal is in demo mode. Real blockchain voting is not yet available for this holiday.'
+                    : gaugeError}
+                </p>
+                {(gaugeError.includes('No deployed gauges') ||
+                  gaugeError.includes('Failed to map charities to gauges')) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mt-4 max-w-2xl mx-auto">
+                    <p className="text-xs sm:text-sm text-blue-800">
+                      <strong>Demo Mode:</strong> This proposal uses mock data
+                      for demonstration purposes. To enable real voting, gauges
+                      need to be deployed for this holiday on the blockchain.
+                    </p>
                   </div>
-                ) : gaugeError ? (
-                  <div className="flex items-center justify-between text-red-400 border-red-400/30 bg-red-400/10">
-                    <div className="flex items-center space-x-3">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm">{gaugeError}</span>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={handleManualRefresh}
+                  disabled={isLoadingGauges || isManualRefresh}
+                  className="mt-4 text-sm sm:text-base"
+                  size="sm"
+                >
+                  <RefreshCw
+                    className={cn(
+                      'w-3 h-3 sm:w-4 sm:h-4 mr-2',
+                      (isLoadingGauges || isManualRefresh) && 'animate-spin'
+                    )}
+                  />
+                  {isLoadingGauges || isManualRefresh ? 'Retrying...' : 'Retry'}
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Voting Status */}
+        {!gaugeError && (
+          <motion.div
+            variants={fadeInVariants}
+            initial="initial"
+            animate="enter"
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 border-slate-700/50 p-4 sm:p-6 rounded-xl">
+              {/* Fix: Improved gauge loading state */}
+              {isLoadingGauges && (
+                <div className="mb-4 p-3 rounded-lg border border-blue-400/30 bg-blue-400/10">
+                  <div className="flex items-center space-x-3 text-blue-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">
+                      {isManualRefresh
+                        ? 'Refreshing gauge data...'
+                        : 'Loading gauge data...'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Fix: Add refresh controls - Responsive layout */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 space-y-3 sm:space-y-0">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Vote className="w-4 h-4 sm:w-5 sm:h-5 text-patriotBlue" />
+                    <h2 className="text-lg sm:text-xl font-bold text-patriotWhite">
+                      Holiday Charity Voting
+                    </h2>
+                  </div>
+                  {lastRefreshTime && (
+                    <div className="text-xs text-slate-400">
+                      Last updated: {lastRefreshTime.toLocaleTimeString()}
                     </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleManualRefresh}
+                    disabled={isLoadingGauges || isManualRefresh}
+                    className="text-slate-400 hover:text-slate-300 text-xs sm:text-sm"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        'w-3 h-3 mr-1',
+                        (isLoadingGauges || isManualRefresh) && 'animate-spin'
+                      )}
+                    />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                  <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-slate-700/50 rounded-lg">
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-slate-300 mb-1">
+                      Your Voting Power
+                    </div>
+                    <div className="text-base sm:text-lg font-bold text-white">
+                      {isLoadingVotingPower ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+                          <span className="text-sm">Loading...</span>
+                        </div>
+                      ) : (
+                        <span className="font-semibold text-yellow-400">
+                          {formatVMFSafe(totalVotingPower)} VMF
+                        </span>
+                      )}
+                    </div>
+                    {userTokenIds.length > 0 && (
+                      <div className="text-xs text-slate-400 mt-1">
+                        Token ID: {userTokenIds[0]}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                  {/* Voting status */}
+                  <div
+                    className={cn(
+                      'inline-flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium',
+                      hasVoted
+                        ? 'bg-green-500/20 text-green-400'
+                        : totalVotingPower > 0 && isVotingActive
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : 'bg-red-500/20 text-red-400'
+                    )}
+                  >
+                    {hasVoted ? (
+                      <>
+                        <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="text-xs sm:text-sm">
+                          Vote Submitted
+                        </span>
+                      </>
+                    ) : totalVotingPower > 0 && isVotingActive ? (
+                      <>
+                        <Target className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="text-xs sm:text-sm">
+                          Ready to Vote
+                        </span>
+                      </>
+                    ) : !isVotingActive ? (
+                      <>
+                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="text-xs sm:text-sm">
+                          Voting Inactive
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="text-xs sm:text-sm">
+                          Lock tokens to vote
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Reset votes button */}
+                  {hasVoted && (
                     <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={initializeGaugeData}
-                      className="text-red-400 hover:text-red-300 h-auto p-1"
+                      variant="outline"
+                      onClick={handleResetVotes}
+                      disabled={isSubmitting}
+                      className="text-xs border-slate-600 text-slate-300 hover:text-white hover:border-slate-500"
                     >
-                      <RefreshCw className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center justify-center w-10 h-10 bg-slate-700/50 rounded-lg">
-                  <Zap className="w-5 h-5 text-yellow-400" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-slate-300 mb-1">
-                    Your Voting Power
-                  </div>
-                  <div className="text-lg font-bold text-white">
-                    {isLoadingVotingPower ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
-                        <span className="text-sm">Loading...</span>
-                      </div>
-                    ) : (
-                      <span className="font-semibold text-yellow-400">
-                        {formatVMFSafe(totalVotingPower)} VMF
-                      </span>
-                    )}
-                  </div>
-                  {userTokenIds.length > 0 && (
-                    <div className="text-xs text-slate-400 mt-1">
-                      Token ID: {userTokenIds[0]}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col items-end space-y-2">
-                {/* Voting status */}
-                <div
-                  className={cn(
-                    'inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium',
-                    hasVoted
-                      ? 'bg-green-500/20 text-green-400'
-                      : totalVotingPower > 0 && isVotingActive
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-red-500/20 text-red-400'
-                  )}
-                >
-                  {hasVoted ? (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Vote Submitted</span>
-                    </>
-                  ) : totalVotingPower > 0 && isVotingActive ? (
-                    <>
-                      <Target className="w-4 h-4" />
-                      <span>Ready to Vote</span>
-                    </>
-                  ) : !isVotingActive ? (
-                    <>
-                      <Clock className="w-4 h-4" />
-                      <span>Voting Inactive</span>
-                    </>
-                  ) : (
-                    <>
-                      <X className="w-4 h-4" />
-                      <span>Lock tokens to vote</span>
-                    </>
-                  )}
-                </div>
-
-                {/* Reset votes button */}
-                {hasVoted && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleResetVotes}
-                    disabled={isSubmitting}
-                    className="text-xs border-slate-600 text-slate-300 hover:text-white hover:border-slate-500"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                    ) : (
-                      <RefreshCw className="w-3 h-3 mr-1" />
-                    )}
-                    Reset Vote
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Voting period info */}
-            {votingPeriodInfo && (
-              <div className="mt-4 pt-4 border-t border-slate-700/50">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-slate-400">Epoch ID</div>
-                    <div className="text-white font-medium">
-                      {votingPeriodInfo.epochId.toString()}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">Voting Active</div>
-                    <div
-                      className={cn(
-                        'font-medium',
-                        isVotingActive ? 'text-green-400' : 'text-red-400'
+                      {isSubmitting ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      ) : (
+                        <RefreshCw className="w-3 h-3 mr-1" />
                       )}
-                    >
-                      {isVotingActive ? 'Yes' : 'No'}
+                      Reset Vote
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Voting period info - Responsive grid */}
+              {votingPeriodInfo && (
+                <div className="mt-4 pt-4 border-t border-slate-700/50">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-slate-400">Epoch ID</div>
+                      <div className="text-white font-medium">
+                        {votingPeriodInfo.epochId.toString()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Voting Active</div>
+                      <div
+                        className={cn(
+                          'font-medium',
+                          isVotingActive ? 'text-green-400' : 'text-red-400'
+                        )}
+                      >
+                        {isVotingActive ? 'Yes' : 'No'}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </Card>
-        </motion.div>
+              )}
+            </Card>
+          </motion.div>
+        )}
 
-        {/* Results Toggle */}
+        {/* Results Toggle - Responsive button */}
         <motion.div
           className="flex justify-center"
           variants={fadeInVariants}
@@ -769,27 +986,28 @@ export function HolidayCharityVoting({
               variant="outline"
               onClick={() => setShowResults(!showResults)}
               className={cn(
-                'relative overflow-hidden bg-gradient-to-r from-slate-800/60 to-slate-900/60 border-slate-600/50 hover:border-slate-500/60 text-white px-8 py-4 rounded-xl shadow-lg backdrop-blur-sm transition-all duration-300',
+                'relative overflow-hidden bg-gradient-to-r from-slate-800/60 to-slate-900/60 border-slate-600/50 hover:border-slate-500/60 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl shadow-lg backdrop-blur-sm transition-all duration-300',
                 'hover:shadow-xl hover:shadow-slate-500/20 hover:from-slate-700/60 hover:to-slate-800/60',
+                'text-sm sm:text-base touch-manipulation',
                 showResults &&
                   'border-blue-400/50 bg-gradient-to-r from-blue-900/30 to-slate-900/60'
               )}
             >
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 sm:space-x-3">
                 <motion.div
                   animate={{ rotate: showResults ? 360 : 0 }}
                   transition={{ duration: 0.5, type: 'spring' }}
                 >
-                  <TrendingUp className="w-5 h-5 text-blue-400" />
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                 </motion.div>
-                <span className="font-semibold text-lg">
+                <span className="font-semibold text-base sm:text-lg">
                   {showResults ? 'Hide Results' : 'Show Results'}
                 </span>
                 <motion.div
                   animate={{ rotate: showResults ? 180 : 0 }}
                   transition={{ duration: 0.3, type: 'spring', stiffness: 300 }}
                 >
-                  <ChevronDown className="w-5 h-5 text-slate-300" />
+                  <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
                 </motion.div>
               </div>
 
@@ -814,23 +1032,23 @@ export function HolidayCharityVoting({
               }}
             >
               <Card className="relative overflow-hidden bg-gradient-to-br from-slate-800/60 to-slate-900/80 border-slate-600/50 rounded-2xl shadow-2xl backdrop-blur-sm">
-                {/* Header with enhanced styling */}
-                <div className="relative p-6 pb-4 border-b border-slate-700/50">
+                {/* Header with enhanced styling - Responsive */}
+                <div className="relative p-4 sm:p-6 pb-3 sm:pb-4 border-b border-slate-700/50">
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-transparent to-blue-500/5" />
-                  <div className="relative flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                  <div className="relative flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                    <div className="flex items-center space-x-3 sm:space-x-4">
                       <motion.div
                         className="relative"
                         whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
                         transition={{ duration: 0.6 }}
                       >
-                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-yellow-500/30 shadow-lg">
-                          <Trophy className="w-6 h-6 text-yellow-400" />
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500/20 to-amber-500/20 rounded-xl flex items-center justify-center border border-yellow-500/30 shadow-lg">
+                          <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
                         </div>
                         <div className="absolute inset-0 bg-yellow-400/20 rounded-xl animate-pulse opacity-50" />
                       </motion.div>
                       <div>
-                        <h3 className="text-2xl font-bold text-white mb-1">
+                        <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
                           Live Results
                         </h3>
                         <p className="text-slate-400 text-sm">
@@ -839,9 +1057,9 @@ export function HolidayCharityVoting({
                       </div>
                     </div>
 
-                    {/* Total votes indicator */}
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-white">
+                    {/* Total votes indicator - Responsive */}
+                    <div className="text-center sm:text-right">
+                      <div className="text-xl sm:text-2xl font-bold text-white">
                         {proposal.totalVotes}
                       </div>
                       <div className="text-xs text-slate-400 uppercase tracking-wide">
@@ -851,8 +1069,8 @@ export function HolidayCharityVoting({
                   </div>
                 </div>
 
-                {/* Results list with enhanced styling */}
-                <div className="p-6 space-y-4">
+                {/* Results list with enhanced styling - Responsive */}
+                <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                   {sortedCharities.map((charity, index) => {
                     const voteData = getCharityVoteData(charity.id);
                     const isLeading = index === 0;
@@ -862,7 +1080,7 @@ export function HolidayCharityVoting({
                       <motion.div
                         key={charity.id}
                         className={cn(
-                          'relative overflow-hidden rounded-xl p-5 transition-all duration-300',
+                          'relative overflow-hidden rounded-xl p-4 sm:p-5 transition-all duration-300',
                           'border backdrop-blur-sm',
                           isLeading
                             ? 'border-yellow-500/50 bg-gradient-to-r from-yellow-500/15 to-amber-500/10 shadow-lg shadow-yellow-500/20'
@@ -879,11 +1097,11 @@ export function HolidayCharityVoting({
                         }}
                         whileHover={{ scale: 1.02, y: -2 }}
                       >
-                        {/* Ranking badge */}
-                        <div className="absolute top-3 left-3">
+                        {/* Ranking badge - Responsive */}
+                        <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
                           <div
                             className={cn(
-                              'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg',
+                              'w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold shadow-lg',
                               isLeading
                                 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-yellow-900'
                                 : index === 1
@@ -897,46 +1115,48 @@ export function HolidayCharityVoting({
                           </div>
                         </div>
 
-                        {/* Content */}
-                        <div className="ml-12">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center space-x-3">
-                              {/* Charity logo */}
-                              <div className="w-10 h-10 bg-slate-700/50 rounded-lg flex items-center justify-center border border-slate-600/30">
+                        {/* Content - Responsive layout */}
+                        <div className="ml-8 sm:ml-12">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 space-y-2 sm:space-y-0">
+                            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                              {/* Charity logo - Responsive */}
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-700/50 rounded-lg flex items-center justify-center border border-slate-600/30 flex-shrink-0">
                                 {charity.logo ? (
                                   <img
                                     src={charity.logo}
                                     alt={charity.name}
-                                    className="w-6 h-6 rounded object-cover"
+                                    className="w-4 h-4 sm:w-6 sm:h-6 rounded object-cover"
                                   />
                                 ) : (
-                                  <Heart className="w-5 h-5 text-red-400" />
+                                  <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
                                 )}
                               </div>
 
-                              <div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="font-bold text-white text-lg">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                                  <span className="font-bold text-white text-base sm:text-lg truncate">
                                     {charity.name}
                                   </span>
-                                  {isLeading && (
-                                    <motion.div
-                                      animate={{ scale: [1, 1.2, 1] }}
-                                      transition={{
-                                        duration: 2,
-                                        repeat: Infinity,
-                                      }}
-                                    >
-                                      <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                                    </motion.div>
-                                  )}
-                                  {isUserVote && (
-                                    <div className="px-2 py-1 bg-green-500/30 text-green-300 text-xs rounded-full border border-green-400/50">
-                                      Your Vote
-                                    </div>
-                                  )}
+                                  <div className="flex items-center space-x-2">
+                                    {isLeading && (
+                                      <motion.div
+                                        animate={{ scale: [1, 1.2, 1] }}
+                                        transition={{
+                                          duration: 2,
+                                          repeat: Infinity,
+                                        }}
+                                      >
+                                        <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-current" />
+                                      </motion.div>
+                                    )}
+                                    {isUserVote && (
+                                      <div className="px-2 py-1 bg-green-500/30 text-green-300 text-xs rounded-full border border-green-400/50">
+                                        Your Vote
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="text-sm text-slate-400">
+                                <div className="text-xs sm:text-sm text-slate-400 truncate">
                                   {charity.category.replace('_', ' ')} •{' '}
                                   {charity.impactMetrics.veteransServed.toLocaleString()}{' '}
                                   veterans served
@@ -944,20 +1164,20 @@ export function HolidayCharityVoting({
                               </div>
                             </div>
 
-                            {/* Vote stats */}
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-white">
+                            {/* Vote stats - Responsive */}
+                            <div className="text-left sm:text-right flex-shrink-0">
+                              <div className="text-lg sm:text-2xl font-bold text-white">
                                 {voteData.percentage.toFixed(1)}%
                               </div>
-                              <div className="text-sm text-slate-400">
+                              <div className="text-xs sm:text-sm text-slate-400">
                                 {voteData.votes.toLocaleString()} votes
                               </div>
                             </div>
                           </div>
 
-                          {/* Progress bar */}
+                          {/* Progress bar - Responsive */}
                           <div className="relative">
-                            <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden">
+                            <div className="w-full bg-slate-700/50 rounded-full h-2 sm:h-3 overflow-hidden">
                               <motion.div
                                 className={cn(
                                   'h-full rounded-full relative overflow-hidden',
@@ -981,9 +1201,9 @@ export function HolidayCharityVoting({
                               </motion.div>
                             </div>
 
-                            {/* Percentage label on bar */}
+                            {/* Percentage label on bar - Responsive */}
                             {voteData.percentage > 15 && (
-                              <div className="absolute inset-y-0 left-3 flex items-center">
+                              <div className="absolute inset-y-0 left-2 sm:left-3 flex items-center">
                                 <span className="text-xs font-bold text-white/90">
                                   {voteData.percentage.toFixed(1)}%
                                 </span>
@@ -994,29 +1214,29 @@ export function HolidayCharityVoting({
 
                         {/* Leading indicator */}
                         {isLeading && (
-                          <div className="absolute top-0 right-0 bg-gradient-to-l from-yellow-500/20 to-transparent w-20 h-full" />
+                          <div className="absolute top-0 right-0 bg-gradient-to-l from-yellow-500/20 to-transparent w-16 sm:w-20 h-full" />
                         )}
                       </motion.div>
                     );
                   })}
                 </div>
 
-                {/* Footer with summary */}
-                <div className="px-6 py-4 border-t border-slate-700/50 bg-slate-900/50">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-4 text-slate-400">
+                {/* Footer with summary - Responsive */}
+                <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-700/50 bg-slate-900/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm space-y-2 sm:space-y-0">
+                    <div className="flex items-center space-x-3 sm:space-x-4 text-slate-400">
                       <div className="flex items-center space-x-1">
                         <div className="w-2 h-2 bg-yellow-400 rounded-full" />
-                        <span>Leading</span>
+                        <span className="text-xs sm:text-sm">Leading</span>
                       </div>
                       {hasVoted && (
                         <div className="flex items-center space-x-1">
                           <div className="w-2 h-2 bg-green-400 rounded-full" />
-                          <span>Your Vote</span>
+                          <span className="text-xs sm:text-sm">Your Vote</span>
                         </div>
                       )}
                     </div>
-                    <div className="text-slate-400">
+                    <div className="text-slate-400 text-xs sm:text-sm">
                       Last updated: {new Date().toLocaleTimeString()}
                     </div>
                   </div>
@@ -1026,34 +1246,34 @@ export function HolidayCharityVoting({
           )}
         </AnimatePresence>
 
-        {/* Charity Selection */}
+        {/* Charity Selection - Fully responsive */}
         <motion.div
           variants={fadeInVariants}
           initial="initial"
           animate="enter"
           transition={{ delay: 0.3 }}
         >
-          <Card className="p-6 rounded-xl bg-slate-800/50 border-slate-700/50">
-            <div className="flex items-center space-x-3 mb-6">
-              <Users className="w-6 h-6 text-blue-400" />
-              <h3 className="text-xl font-bold text-white">
+          <Card className="p-4 sm:p-6 rounded-xl bg-slate-800/50 border-slate-700/50">
+            <div className="flex items-center space-x-2 sm:space-x-3 mb-4 sm:mb-6">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
+              <h3 className="text-lg sm:text-xl font-bold text-white">
                 {hasVoted ? 'Available Charities' : 'Choose Your Charity'}
               </h3>
             </div>
 
-            {/* Loading State */}
+            {/* Loading State - Responsive */}
             {charitiesLoading && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
-                    className="border border-slate-700/50 rounded-lg p-4 bg-slate-800/30"
+                    className="border border-slate-700/50 rounded-lg p-3 sm:p-4 bg-slate-800/30"
                   >
-                    <div className="flex items-start space-x-3">
-                      <div className="w-12 h-12 bg-slate-700/50 rounded-lg animate-pulse" />
+                    <div className="flex items-start space-x-2 sm:space-x-3">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-700/50 rounded-lg animate-pulse" />
                       <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-slate-700/50 rounded animate-pulse" />
-                        <div className="h-3 bg-slate-700/50 rounded w-3/4 animate-pulse" />
+                        <div className="h-3 sm:h-4 bg-slate-700/50 rounded animate-pulse" />
+                        <div className="h-2 sm:h-3 bg-slate-700/50 rounded w-3/4 animate-pulse" />
                       </div>
                     </div>
                   </div>
@@ -1061,30 +1281,33 @@ export function HolidayCharityVoting({
               </div>
             )}
 
-            {/* No Charities */}
+            {/* No Charities - Responsive */}
             {!charitiesLoading && availableCharities.length === 0 && (
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <h4 className="text-lg font-semibold text-white mb-2">
+              <div className="text-center py-6 sm:py-8">
+                <Users className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-3" />
+                <h4 className="text-base sm:text-lg font-semibold text-white mb-2">
                   No Charities Available
                 </h4>
-                <p className="text-slate-400">
+                <p className="text-sm sm:text-base text-slate-400">
                   Charity data is currently unavailable.
                 </p>
               </div>
             )}
 
-            {/* Charity Grid */}
+            {/* Charity Grid - Fully responsive */}
             {!charitiesLoading && availableCharities.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                 {availableCharities.map((charity, index) => {
+                  if (!charity) return null;
+
                   const isUserVote = hasUserVotedForCharity(charity.id);
                   const canVote =
                     !hasVoted &&
                     totalVotingPower > 0 &&
                     isVotingActive &&
                     !isLoadingGauges &&
-                    !gaugeError;
+                    !gaugeError &&
+                    charity.gaugeMapping !== null; // Only allow voting if gauge mapping exists
                   const isSubmittingThisCharity =
                     isSubmitting && selectedCharity === charity.id;
 
@@ -1092,8 +1315,9 @@ export function HolidayCharityVoting({
                     <motion.div
                       key={charity.id}
                       className={cn(
-                        'group relative border rounded-xl p-4 sm:p-6 transition-all duration-300 overflow-hidden',
+                        'group relative border rounded-xl p-3 sm:p-4 md:p-6 transition-all duration-300 overflow-hidden',
                         'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/5 before:to-transparent before:translate-x-[-100%] before:transition-transform before:duration-700',
+                        'touch-manipulation',
                         isUserVote
                           ? 'border-green-500/60 bg-gradient-to-br from-green-500/20 to-emerald-500/10 shadow-lg shadow-green-500/20'
                           : canVote
@@ -1142,8 +1366,8 @@ export function HolidayCharityVoting({
                       {isSubmittingThisCharity && (
                         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
                           <div className="flex items-center space-x-3 text-white">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="font-medium">
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                            <span className="font-medium text-sm sm:text-base">
                               Submitting Vote...
                             </span>
                           </div>
@@ -1163,13 +1387,13 @@ export function HolidayCharityVoting({
                         )}
                       />
 
-                      {/* Content container with 3D transform */}
-                      <div className="relative z-10 transform transition-transform duration-300 group-hover:translate-z-4 pb-4">
+                      {/* Content container with 3D transform - Responsive */}
+                      <div className="relative z-10 transform transition-transform duration-300 group-hover:translate-z-4 pb-3 sm:pb-4">
                         <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
-                            {/* Enhanced charity logo with hover effects */}
+                          <div className="flex items-start space-x-2 sm:space-x-3 md:space-x-4 flex-1 min-w-0">
+                            {/* Enhanced charity logo with hover effects - Responsive */}
                             <motion.div
-                              className="relative flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-slate-700/60 to-slate-800/80 rounded-xl flex-shrink-0 shadow-lg border border-slate-600/30"
+                              className="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gradient-to-br from-slate-700/60 to-slate-800/80 rounded-xl flex-shrink-0 shadow-lg border border-slate-600/30"
                               whileHover={
                                 canVote && !isSubmittingThisCharity
                                   ? {
@@ -1203,10 +1427,10 @@ export function HolidayCharityVoting({
                                 <img
                                   src={charity.logo}
                                   alt={charity.name}
-                                  className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg object-cover transition-transform duration-300 group-hover:scale-110"
+                                  className="w-5 h-5 sm:w-6 sm:h-6 md:w-10 md:h-10 rounded-lg object-cover transition-transform duration-300 group-hover:scale-110"
                                 />
                               ) : (
-                                <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-red-400 transition-all duration-300 group-hover:scale-110 group-hover:text-red-300" />
+                                <Heart className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-red-400 transition-all duration-300 group-hover:scale-110 group-hover:text-red-300" />
                               )}
 
                               {/* Pulse effect for user vote */}
@@ -1216,28 +1440,28 @@ export function HolidayCharityVoting({
                             </motion.div>
 
                             <div className="flex-1 min-w-0">
-                              {/* Enhanced header with better animations */}
-                              <div className="flex items-start sm:items-center flex-col sm:flex-row sm:space-x-3 mb-2 sm:mb-3">
+                              {/* Enhanced header with better animations - Responsive */}
+                              <div className="flex items-start flex-col space-y-2 mb-2 sm:mb-3">
                                 <motion.h4
-                                  className="font-bold text-white text-base sm:text-lg leading-tight transition-colors duration-300 group-hover:text-blue-100 mb-2 sm:mb-0"
+                                  className="font-bold text-white text-sm sm:text-base md:text-lg leading-tight transition-colors duration-300 group-hover:text-blue-100"
                                   whileHover={{ scale: 1.02 }}
                                 >
                                   {charity.name}
                                 </motion.h4>
 
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
                                   {charity.verification.is501c3 && (
                                     <motion.div
                                       whileHover={{ scale: 1.2, rotate: 360 }}
                                       transition={{ duration: 0.6 }}
                                     >
-                                      <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0 drop-shadow-lg" />
+                                      <Shield className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-green-400 flex-shrink-0 drop-shadow-lg" />
                                     </motion.div>
                                   )}
 
                                   {isUserVote && (
                                     <motion.div
-                                      className="inline-flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-1 bg-green-500/30 text-green-300 text-xs sm:text-sm rounded-full border border-green-400/50 shadow-lg"
+                                      className="inline-flex items-center space-x-1 px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1 bg-green-500/30 text-green-300 text-xs sm:text-sm rounded-full border border-green-400/50 shadow-lg"
                                       initial={{ scale: 0, rotate: -180 }}
                                       animate={{ scale: 1, rotate: 0 }}
                                       transition={{
@@ -1247,7 +1471,7 @@ export function HolidayCharityVoting({
                                       }}
                                       whileHover={{ scale: 1.05 }}
                                     >
-                                      <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                                      <Check className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4" />
                                       <span className="font-medium">
                                         Your Vote
                                       </span>
@@ -1256,18 +1480,18 @@ export function HolidayCharityVoting({
                                 </div>
                               </div>
 
-                              {/* Enhanced description with better typography */}
+                              {/* Enhanced description with better typography - Responsive */}
                               <motion.p
-                                className="text-slate-300 text-sm sm:text-base mb-3 sm:mb-4 line-clamp-2 leading-relaxed transition-colors duration-300 group-hover:text-slate-200"
+                                className="text-slate-300 text-xs sm:text-sm md:text-base mb-2 sm:mb-3 md:mb-4 line-clamp-2 leading-relaxed transition-colors duration-300 group-hover:text-slate-200"
                                 whileHover={{ scale: 1.01 }}
                               >
                                 {charity.description}
                               </motion.p>
 
-                              {/* Enhanced tags with better hover effects */}
-                              <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                              {/* Enhanced tags with better hover effects - Responsive */}
+                              <div className="flex items-center flex-wrap gap-1 sm:gap-1.5 md:gap-2 text-xs">
                                 <motion.div
-                                  className="px-2 py-1 sm:px-3 sm:py-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-300 rounded-lg border border-yellow-500/30 font-medium shadow-sm"
+                                  className="px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-300 rounded-lg border border-yellow-500/30 font-medium shadow-sm"
                                   whileHover={{
                                     scale: 1.05,
                                     boxShadow:
@@ -1282,7 +1506,7 @@ export function HolidayCharityVoting({
                                 </motion.div>
 
                                 <motion.div
-                                  className="px-2 py-1 sm:px-3 sm:py-1.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 rounded-lg border border-blue-500/30 font-medium shadow-sm"
+                                  className="px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 rounded-lg border border-blue-500/30 font-medium shadow-sm"
                                   whileHover={{
                                     scale: 1.05,
                                     boxShadow:
@@ -1293,7 +1517,7 @@ export function HolidayCharityVoting({
                                     stiffness: 400,
                                   }}
                                 >
-                                  <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
+                                  <Users className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 inline mr-1" />
                                   <span className="hidden sm:inline">
                                     {charity.impactMetrics.veteransServed.toLocaleString()}{' '}
                                     served
@@ -1310,7 +1534,7 @@ export function HolidayCharityVoting({
                                     href={charity.website}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-1.5 bg-gradient-to-r from-slate-600/50 to-slate-700/50 text-slate-300 hover:text-white rounded-lg transition-all duration-300 border border-slate-500/30 shadow-sm"
+                                    className="inline-flex items-center space-x-1 px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-slate-600/50 to-slate-700/50 text-slate-300 hover:text-white rounded-lg transition-all duration-300 border border-slate-500/30 shadow-sm"
                                     onClick={e => e.stopPropagation()}
                                     whileHover={{
                                       scale: 1.05,
@@ -1324,22 +1548,22 @@ export function HolidayCharityVoting({
                                       stiffness: 400,
                                     }}
                                   >
-                                    <Globe className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                    <Globe className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3" />
                                     <span className="text-xs font-medium hidden sm:inline">
                                       Visit
                                     </span>
-                                    <ExternalLink className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+                                    <ExternalLink className="w-1.5 h-1.5 sm:w-2 sm:h-2 md:w-2.5 md:h-2.5" />
                                   </motion.a>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          {/* Enhanced action button with better animations */}
-                          <div className="ml-2 sm:ml-4 flex-shrink-0">
+                          {/* Enhanced action button with better animations - Responsive */}
+                          <div className="ml-1 sm:ml-2 md:ml-4 flex-shrink-0">
                             {isUserVote ? (
                               <motion.div
-                                className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-xl border border-green-400/50 shadow-lg"
+                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-xl border border-green-400/50 shadow-lg"
                                 initial={{ scale: 0, rotate: -180 }}
                                 animate={{ scale: 1, rotate: 0 }}
                                 transition={{
@@ -1353,11 +1577,11 @@ export function HolidayCharityVoting({
                                     '0 8px 25px rgba(34, 197, 94, 0.4)',
                                 }}
                               >
-                                <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-300" />
+                                <Check className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md-h-6 text-green-300" />
                               </motion.div>
                             ) : canVote ? (
                               <motion.div
-                                className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl border border-blue-400/50 shadow-lg transition-all duration-300 group-hover:from-blue-400/40 group-hover:to-cyan-400/40 group-hover:border-blue-300/60"
+                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl border border-blue-400/50 shadow-lg transition-all duration-300 group-hover:from-blue-400/40 group-hover:to-cyan-400/40 group-hover:border-blue-300/60"
                                 whileHover={{
                                   scale: 1.15,
                                   rotate: [0, -10, 10, 0],
@@ -1371,24 +1595,24 @@ export function HolidayCharityVoting({
                                   damping: 10,
                                 }}
                               >
-                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-blue-300 transition-transform duration-300 group-hover:translate-x-1" />
+                                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-blue-300 transition-transform duration-300 group-hover:translate-x-1" />
                               </motion.div>
                             ) : (
                               <motion.div
-                                className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-600/20 to-slate-700/20 rounded-xl border border-slate-500/30"
+                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-slate-600/20 to-slate-700/20 rounded-xl border border-slate-500/30"
                                 whileHover={{ scale: 1.05 }}
                               >
-                                <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
+                                <X className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-slate-400" />
                               </motion.div>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Enhanced bottom border with gradient animation - moved lower */}
+                      {/* Enhanced bottom border with gradient animation - moved lower - Responsive */}
                       <div
                         className={cn(
-                          'absolute bottom-2 left-4 right-4 h-1 bg-gradient-to-r transition-all duration-500 rounded-full',
+                          'absolute bottom-1.5 sm:bottom-2 left-3 sm:left-4 right-3 sm:right-4 h-0.5 sm:h-1 bg-gradient-to-r transition-all duration-500 rounded-full',
                           'transform scale-x-0 group-hover:scale-x-100 origin-left',
                           isUserVote
                             ? 'from-green-400 via-emerald-400 to-green-500 scale-x-100'
@@ -1398,13 +1622,13 @@ export function HolidayCharityVoting({
                         )}
                       />
 
-                      {/* Floating particles effect on hover */}
+                      {/* Floating particles effect on hover - Responsive */}
                       {canVote && (
                         <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                           {[...Array(6)].map((_, i) => (
                             <motion.div
                               key={i}
-                              className="absolute w-1 h-1 bg-blue-400 rounded-full"
+                              className="absolute w-0.5 h-0.5 sm:w-1 sm:h-1 bg-blue-400 rounded-full"
                               style={{
                                 left: `${20 + i * 15}%`,
                                 top: `${30 + (i % 2) * 40}%`,
@@ -1431,16 +1655,16 @@ export function HolidayCharityVoting({
           </Card>
         </motion.div>
 
-        {/* Status Messages */}
+        {/* Status Messages - Responsive */}
         {totalVotingPower === BigInt(0) && !hasVoted && (
-          <Card className="bg-yellow-500/10 border-yellow-500/30 p-4 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <Info className="w-5 h-5 text-yellow-400" />
+          <Card className="bg-yellow-500/10 border-yellow-500/30 p-3 sm:p-4 rounded-lg">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Info className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 flex-shrink-0" />
               <div>
-                <div className="font-medium text-yellow-400">
+                <div className="font-medium text-yellow-400 text-sm sm:text-base">
                   Lock VMF Tokens to Vote
                 </div>
-                <div className="text-sm text-slate-300">
+                <div className="text-xs sm:text-sm text-slate-300">
                   You need to lock VMF tokens to participate in charity voting
                 </div>
               </div>
@@ -1449,14 +1673,14 @@ export function HolidayCharityVoting({
         )}
 
         {hasVoted && (
-          <Card className="bg-green-500/10 border-green-500/30 p-4 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <CheckCircle className="w-5 h-5 text-green-400" />
+          <Card className="bg-green-500/10 border-green-500/30 p-3 sm:p-4 rounded-lg">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
               <div>
-                <div className="font-medium text-green-400">
+                <div className="font-medium text-green-400 text-sm sm:text-base">
                   Vote Successfully Submitted!
                 </div>
-                <div className="text-sm text-slate-300">
+                <div className="text-xs sm:text-sm text-slate-300">
                   Thank you for participating in the holiday charity selection
                 </div>
               </div>
