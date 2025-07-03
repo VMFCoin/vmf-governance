@@ -108,8 +108,6 @@ export const useCharityStore = create<CharityState>()(
         try {
           const result = await charityService.getAllCharities(page, 20);
 
-          console.log('Fetched charitiessssssss:', result);
-
           set(prevState => ({
             charities: reset
               ? result.charities

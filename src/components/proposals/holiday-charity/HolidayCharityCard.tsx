@@ -150,7 +150,7 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
     return 0;
   }, [proposal, mode]);
 
-  // UPCOMING HOLIDAY MODE - Enhanced Mobile Responsiveness
+  // UPCOMING HOLIDAY MODE - Fixed Large Screen Responsiveness
   if (mode === 'upcoming' && nextHoliday) {
     const { holiday, status } = nextHoliday;
 
@@ -167,26 +167,26 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-br from-patriotRed/20 via-transparent to-patriotBlue/20" />
         </div>
 
-        <div className="relative p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8 xl:p-10">
-          {/* Header - Enhanced Mobile Layout with comprehensive responsive */}
+        <div className="relative p-4 sm:p-5 md:p-6 lg:p-6">
+          {/* Header - Fixed scaling for large screens */}
           <motion.div
-            className="flex flex-col xs:flex-row sm:flex-row items-start xs:items-center sm:items-center justify-between mb-3 xs:mb-4 sm:mb-5 md:mb-6 lg:mb-8 gap-2 xs:gap-3 sm:gap-4 md:gap-5"
+            className="flex flex-col xs:flex-row items-start xs:items-center justify-between mb-4 sm:mb-5 md:mb-6 gap-3 sm:gap-4"
             variants={fadeInVariants}
             initial="initial"
             animate="enter"
             transition={{ delay: 0.1 }}
           >
-            <div className="flex items-center space-x-2 xs:space-x-3 sm:space-x-4 md:space-x-5 w-full xs:w-auto">
-              <div className="w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 bg-gradient-to-br from-patriotRed to-red-600 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
-                <span className="text-sm xs:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl">
+            <div className="flex items-center space-x-3 sm:space-x-4 w-full xs:w-auto">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-12 lg:h-12 bg-gradient-to-br from-patriotRed to-red-600 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                <span className="text-lg sm:text-xl md:text-2xl lg:text-xl">
                   {holiday.flagIcon}
                 </span>
               </div>
               <div className="flex-1 xs:flex-initial min-w-0">
-                <h3 className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-display font-bold text-patriotWhite group-hover:text-starGold transition-colors truncate">
+                <h3 className="text-base sm:text-lg md:text-xl lg:text-lg font-display font-bold text-patriotWhite group-hover:text-starGold transition-colors truncate">
                   {holiday.name}
                 </h3>
-                <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl text-textSecondary">
+                <p className="text-sm sm:text-base md:text-lg lg:text-base text-textSecondary">
                   {new Intl.DateTimeFormat('en-US', {
                     month: 'long',
                     day: 'numeric',
@@ -195,19 +195,19 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
                 </p>
               </div>
             </div>
-            <div className="text-left xs:text-right sm:text-right w-full xs:w-auto flex-shrink-0">
-              <div className="text-xs xs:text-sm sm:text-base md:text-lg text-textSecondary">
+            <div className="text-left xs:text-right w-full xs:w-auto flex-shrink-0">
+              <div className="text-sm sm:text-base lg:text-sm text-textSecondary">
                 Fund Allocation
               </div>
-              <div className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-starGold">
+              <div className="text-lg sm:text-xl md:text-2xl lg:text-xl font-bold text-starGold">
                 {formatCurrency(holiday.fundAllocation)}
               </div>
             </div>
           </motion.div>
 
-          {/* Holiday Description - Mobile Optimized with enhanced responsive */}
+          {/* Holiday Description - Fixed scaling */}
           <motion.p
-            className="text-textSecondary text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl mb-3 xs:mb-4 sm:mb-5 md:mb-6 lg:mb-8 leading-relaxed"
+            className="text-textSecondary text-sm sm:text-base lg:text-sm mb-4 sm:mb-5 md:mb-6 leading-relaxed"
             variants={fadeInVariants}
             initial="initial"
             animate="enter"
@@ -216,23 +216,23 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
             {holiday.description}
           </motion.p>
 
-          {/* Countdown Timer - Enhanced Mobile Layout with comprehensive responsive */}
+          {/* Countdown Timer - Fixed scaling for large screens */}
           <motion.div
-            className="mb-3 xs:mb-4 sm:mb-5 md:mb-6 lg:mb-8"
+            className="mb-4 sm:mb-5 md:mb-6"
             variants={fadeInVariants}
             initial="initial"
             animate="enter"
             transition={{ delay: 0.3 }}
           >
-            <div className="flex items-center gap-1 xs:gap-2 sm:gap-3 md:gap-4 mb-2 xs:mb-3 sm:mb-4 md:mb-5">
-              <Timer className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 xl:w-8 xl:h-8 text-patriotRed flex-shrink-0" />
-              <span className="font-semibold text-patriotWhite text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <Timer className="w-4 h-4 sm:w-5 sm:h-5 lg:w-4 lg:h-4 text-patriotRed flex-shrink-0" />
+              <span className="font-semibold text-patriotWhite text-sm sm:text-base lg:text-sm">
                 Voting Starts In
               </span>
             </div>
 
-            {/* Enhanced Mobile-First Countdown Grid with comprehensive breakpoints */}
-            <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-2 xs:gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-8">
+            {/* Fixed Countdown Grid - Capped scaling */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 lg:gap-3">
               {[
                 { label: 'Days', value: timeRemaining.days },
                 { label: 'Hours', value: timeRemaining.hours },
@@ -241,18 +241,18 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
               ].map((unit, index) => (
                 <div
                   key={unit.label}
-                  className="text-center p-2 xs:p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8 bg-gradient-to-b from-patriotBlue/20 to-patriotRed/20 rounded-lg sm:rounded-xl md:rounded-2xl border border-patriotBlue/30 hover:border-patriotBlue/50 transition-colors duration-300"
+                  className="text-center p-3 sm:p-4 lg:p-3 bg-gradient-to-b from-patriotBlue/20 to-patriotRed/20 rounded-lg border border-patriotBlue/30 hover:border-patriotBlue/50 transition-colors duration-300"
                 >
                   <motion.div
                     key={unit.value}
                     initial={{ scale: 1.1, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.2, delay: index * 0.1 }}
-                    className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-patriotWhite mb-1 sm:mb-2 md:mb-3"
+                    className="text-xl sm:text-2xl lg:text-xl font-bold text-patriotWhite mb-1 sm:mb-2"
                   >
                     {unit.value.toString().padStart(2, '0')}
                   </motion.div>
-                  <div className="text-xs xs:text-sm sm:text-base md:text-lg text-textSecondary uppercase tracking-wide">
+                  <div className="text-xs sm:text-sm lg:text-xs text-textSecondary uppercase tracking-wide">
                     {unit.label}
                   </div>
                 </div>
@@ -260,17 +260,17 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
             </div>
           </motion.div>
 
-          {/* Status Information - Enhanced Mobile Responsive */}
+          {/* Status Information - Fixed scaling */}
           <motion.div
-            className="flex flex-col xs:flex-row sm:flex-row items-start xs:items-center sm:items-center justify-between pt-3 xs:pt-4 sm:pt-5 md:pt-6 lg:pt-8 border-t border-patriotRed/30 gap-2 xs:gap-3 sm:gap-4 md:gap-0"
+            className="flex flex-col xs:flex-row items-start xs:items-center justify-between pt-4 sm:pt-5 border-t border-patriotRed/30 gap-2 xs:gap-3"
             variants={fadeInVariants}
             initial="initial"
             animate="enter"
             transition={{ delay: 0.4 }}
           >
             <SimpleTooltip text="Current voting phase status">
-              <div className="flex items-center text-textSecondary text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl">
-                <Calendar className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 mr-1 sm:mr-2 md:mr-3" />
+              <div className="flex items-center text-textSecondary text-sm lg:text-sm">
+                <Calendar className="w-4 h-4 lg:w-4 lg:h-4 mr-2" />
                 <span className="font-medium capitalize">
                   {status.phase.replace('_', ' ')}
                 </span>
@@ -278,8 +278,8 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
             </SimpleTooltip>
 
             <SimpleTooltip text="Get notified when voting opens">
-              <div className="flex items-center text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl">
-                <Sparkles className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 mr-1 sm:mr-2 md:mr-3 text-starGold" />
+              <div className="flex items-center text-sm lg:text-sm">
+                <Sparkles className="w-4 h-4 lg:w-4 lg:h-4 mr-2 text-starGold" />
                 <span className="text-patriotWhite font-semibold">
                   Upcoming Vote
                 </span>
@@ -287,9 +287,9 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
             </SimpleTooltip>
           </motion.div>
 
-          {/* Action Button - Enhanced Mobile Optimized */}
+          {/* Action Button - Fixed scaling */}
           <motion.div
-            className="mt-3 xs:mt-4 sm:mt-5 md:mt-6 lg:mt-8 pt-3 xs:pt-4 sm:pt-5 md:pt-6 lg:pt-8 border-t border-patriotRed/30"
+            className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-patriotRed/30"
             variants={fadeInVariants}
             initial="initial"
             animate="enter"
@@ -299,10 +299,10 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
               asChild
               variant="outline"
               size="md"
-              className="w-full font-semibold group-hover:shadow-xl border-patriotBlue/50 hover:border-patriotBlue hover:bg-patriotBlue/10 min-h-[44px] sm:min-h-[48px] md:min-h-[52px] lg:min-h-[56px] xl:min-h-[60px] text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl touch-manipulation"
+              className="w-full font-semibold group-hover:shadow-xl border-patriotBlue/50 hover:border-patriotBlue hover:bg-patriotBlue/10 min-h-[44px] text-sm lg:text-sm touch-manipulation"
             >
               <Link href="/calendar">
-                <Flag className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 mr-2 sm:mr-3 md:mr-4" />
+                <Flag className="w-4 h-4 lg:w-4 lg:h-4 mr-2" />
                 <span className="xs:hidden sm:hidden md:inline">
                   View Calendar
                 </span>
@@ -310,7 +310,7 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
                   View Calendar
                 </span>
                 <span className="hidden md:inline">View Holiday Calendar</span>
-                <ChevronRight className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 ml-2 sm:ml-3 md:ml-4" />
+                <ChevronRight className="w-4 h-4 lg:w-4 lg:h-4 ml-2" />
               </Link>
             </Button>
           </motion.div>
@@ -319,7 +319,7 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
     );
   }
 
-  // ACTIVE PROPOSAL MODE - Enhanced Mobile Responsiveness
+  // ACTIVE PROPOSAL MODE - Fixed Large Screen Responsiveness
   if (mode === 'active' && proposal) {
     return (
       <AnimatedCard
@@ -335,37 +335,37 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
         </div>
 
         <Link href={`/proposal/${proposal.id}`} className="block relative">
-          <div className="p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8 xl:p-10">
-            {/* Header with Status - Enhanced Mobile Layout with comprehensive responsive */}
+          <div className="p-4 sm:p-5 md:p-6 lg:p-6">
+            {/* Header with Status - Fixed scaling */}
             <motion.div
-              className="flex flex-col xs:flex-row sm:flex-row items-start xs:items-center sm:items-center justify-between mb-3 xs:mb-4 sm:mb-5 md:mb-6 lg:mb-8 gap-2 xs:gap-3 sm:gap-4 md:gap-5"
+              className="flex flex-col xs:flex-row items-start xs:items-center justify-between mb-4 sm:mb-5 md:mb-6 gap-3 sm:gap-4"
               variants={fadeInVariants}
               initial="initial"
               animate="enter"
               transition={{ delay: 0.1 }}
             >
               <div className="flex-1 w-full xs:w-auto min-w-0">
-                <div className="flex items-center space-x-2 xs:space-x-3 sm:space-x-4 mb-1 xs:mb-2 sm:mb-3">
-                  <h3 className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-display font-bold text-patriotWhite group-hover:text-starGold transition-colors truncate">
+                <div className="flex items-center space-x-2 sm:space-x-3 mb-1 sm:mb-2">
+                  <h3 className="text-base sm:text-lg md:text-xl lg:text-lg font-display font-bold text-patriotWhite group-hover:text-starGold transition-colors truncate">
                     {proposal.title}
                   </h3>
                   <VotingStatusIndicator
                     holidayId={proposal.holidayId}
-                    className="ml-1 xs:ml-2 sm:ml-3 flex-shrink-0"
+                    className="ml-2 flex-shrink-0"
                     size="sm"
                   />
                 </div>
-                <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl text-textSecondary">
+                <p className="text-sm sm:text-base lg:text-sm text-textSecondary">
                   by {proposal.author}
                 </p>
               </div>
-              <div className="text-left xs:text-right sm:text-right w-full xs:w-auto flex-shrink-0">
-                <div className="text-xs xs:text-sm sm:text-base md:text-lg text-textSecondary">
+              <div className="text-left xs:text-right w-full xs:w-auto flex-shrink-0">
+                <div className="text-sm lg:text-sm text-textSecondary">
                   Status
                 </div>
                 <div
                   className={cn(
-                    'text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl font-semibold',
+                    'text-sm sm:text-base lg:text-sm font-semibold',
                     getStatusColor(proposal.status)
                   )}
                 >
@@ -375,80 +375,80 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
               </div>
             </motion.div>
 
-            {/* Fund Allocation & Time Left - Enhanced Mobile Grid */}
+            {/* Fund Allocation & Time Left - Fixed scaling */}
             <motion.div
-              className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-2 gap-3 xs:gap-4 sm:gap-5 md:gap-6 lg:gap-8 mb-3 xs:mb-4 sm:mb-5 md:mb-6 lg:mb-8"
+              className="grid grid-cols-1 xs:grid-cols-2 gap-4 sm:gap-5 lg:gap-4 mb-4 sm:mb-5"
               variants={fadeInVariants}
               initial="initial"
               animate="enter"
               transition={{ delay: 0.2 }}
             >
-              <div className="flex items-center space-x-2 xs:space-x-3 sm:space-x-4 md:space-x-5 p-2 xs:p-3 sm:p-4 md:p-5 bg-backgroundDark/30 rounded-lg sm:rounded-xl md:rounded-2xl border border-patriotBlue/20 hover:border-patriotBlue/40 transition-colors duration-300">
-                <div className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-starGold/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-starGold" />
+              <div className="flex items-center space-x-3 p-3 sm:p-4 lg:p-3 bg-backgroundDark/30 rounded-lg border border-patriotBlue/20 hover:border-patriotBlue/40 transition-colors duration-300">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-8 lg:h-8 bg-starGold/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 lg:w-4 lg:h-4 text-starGold" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs xs:text-sm sm:text-base md:text-lg text-textSecondary">
+                  <div className="text-sm lg:text-xs text-textSecondary">
                     Fund Allocation
                   </div>
-                  <div className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-patriotWhite truncate">
+                  <div className="text-base sm:text-lg lg:text-base font-semibold text-patriotWhite truncate">
                     {formatCurrency(proposal.fundAmount)}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 xs:space-x-3 sm:space-x-4 md:space-x-5 p-2 xs:p-3 sm:p-4 md:p-5 bg-backgroundDark/30 rounded-lg sm:rounded-xl md:rounded-2xl border border-patriotBlue/20 hover:border-patriotBlue/40 transition-colors duration-300">
-                <div className="w-6 h-6 xs:w-7 xs:h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-patriotRed/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-patriotRed" />
+              <div className="flex items-center space-x-3 p-3 sm:p-4 lg:p-3 bg-backgroundDark/30 rounded-lg border border-patriotBlue/20 hover:border-patriotBlue/40 transition-colors duration-300">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-8 lg:h-8 bg-patriotRed/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 lg:w-4 lg:h-4 text-patriotRed" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs xs:text-sm sm:text-base md:text-lg text-textSecondary">
+                  <div className="text-sm lg:text-xs text-textSecondary">
                     Time Left
                   </div>
-                  <div className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-patriotWhite truncate">
+                  <div className="text-base sm:text-lg lg:text-base font-semibold text-patriotWhite truncate">
                     {proposal.timeLeft}
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            {/* Available Charities - Mobile Responsive */}
+            {/* Available Charities - Fixed scaling */}
             <motion.div
-              className="mb-4 xs:mb-6"
+              className="mb-4 sm:mb-5"
               variants={fadeInVariants}
               initial="initial"
               animate="enter"
               transition={{ delay: 0.3 }}
             >
-              <div className="flex items-center justify-between mb-2 xs:mb-3">
-                <span className="text-sm xs:text-base font-medium text-patriotWhite">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-sm sm:text-base lg:text-sm font-medium text-patriotWhite">
                   Available Charities
                 </span>
-                <span className="text-xs text-textSecondary">
+                <span className="text-xs lg:text-xs text-textSecondary">
                   {charities.length} options
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1 xs:gap-2">
+              <div className="flex flex-wrap gap-2">
                 {charities
                   .slice(0, 3)
                   .map((charity: Charity, index: number) => (
                     <motion.div
                       key={charity.id}
-                      className="flex items-center space-x-1 xs:space-x-2 bg-backgroundAccent rounded-lg px-2 xs:px-3 py-1 xs:py-2 border border-patriotBlue/30"
+                      className="flex items-center space-x-2 bg-backgroundAccent rounded-lg px-3 py-1 border border-patriotBlue/30"
                       variants={fadeInVariants}
                       initial="initial"
                       animate="enter"
                       transition={{ delay: 0.4 + index * 0.1 }}
                     >
-                      <Heart className="w-2 h-2 xs:w-3 xs:h-3 text-patriotRed flex-shrink-0" />
-                      <span className="text-xs font-medium text-patriotWhite truncate">
+                      <Heart className="w-3 h-3 lg:w-3 lg:h-3 text-patriotRed flex-shrink-0" />
+                      <span className="text-xs lg:text-xs font-medium text-patriotWhite truncate">
                         {charity.name}
                       </span>
                     </motion.div>
                   ))}
                 {charities.length > 3 && (
-                  <div className="flex items-center justify-center bg-backgroundAccent rounded-lg px-2 xs:px-3 py-1 xs:py-2 border border-patriotBlue/30">
-                    <span className="text-xs text-textSecondary">
+                  <div className="flex items-center justify-center bg-backgroundAccent rounded-lg px-3 py-1 border border-patriotBlue/30">
+                    <span className="text-xs lg:text-xs text-textSecondary">
                       +{charities.length - 3} more
                     </span>
                   </div>
@@ -456,23 +456,23 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
               </div>
             </motion.div>
 
-            {/* Voting Progress - Mobile Optimized */}
+            {/* Voting Progress - Fixed scaling */}
             <motion.div
-              className="mb-3 xs:mb-4"
+              className="mb-4"
               variants={fadeInVariants}
               initial="initial"
               animate="enter"
               transition={{ delay: 0.6 }}
             >
-              <div className="flex items-center justify-between text-xs xs:text-sm mb-2">
+              <div className="flex items-center justify-between text-sm lg:text-xs mb-2">
                 <span className="text-textSecondary">Voting Progress</span>
                 <span className="text-patriotWhite font-medium">
                   {totalVotes}% participation
                 </span>
               </div>
-              <div className="w-full bg-backgroundDark rounded-full h-1.5 xs:h-2 shadow-inner">
+              <div className="w-full bg-backgroundDark rounded-full h-2 shadow-inner">
                 <motion.div
-                  className="bg-gradient-to-r from-patriotRed to-red-400 h-1.5 xs:h-2 rounded-full shadow-sm"
+                  className="bg-gradient-to-r from-patriotRed to-red-400 h-2 rounded-full shadow-sm"
                   initial={{ width: 0 }}
                   animate={{ width: `${totalVotes}%` }}
                   transition={{ duration: 1, ease: 'easeOut', delay: 0.7 }}
@@ -481,22 +481,22 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
             </motion.div>
 
             <motion.div
-              className="flex flex-col xs:flex-row items-start xs:items-center justify-between pt-3 xs:pt-4 border-t border-patriotRed/30 gap-2 xs:gap-0"
+              className="flex flex-col xs:flex-row items-start xs:items-center justify-between pt-4 border-t border-patriotRed/30 gap-2 xs:gap-0"
               variants={fadeInVariants}
               initial="initial"
               animate="enter"
               transition={{ delay: 0.8 }}
             >
               <SimpleTooltip text="Number of eligible voters who have participated">
-                <div className="flex items-center text-textSecondary text-xs xs:text-sm">
-                  <Users className="w-3 h-3 xs:w-4 xs:h-4 mr-1" />
+                <div className="flex items-center text-textSecondary text-sm lg:text-xs">
+                  <Users className="w-4 h-4 lg:w-3 lg:h-3 mr-1" />
                   <span className="font-medium">{totalVotes}% voted</span>
                 </div>
               </SimpleTooltip>
 
               <SimpleTooltip text="Charity selection voting">
-                <div className="flex items-center text-xs xs:text-sm">
-                  <TrendingUp className="w-3 h-3 xs:w-4 xs:h-4 mr-1 text-patriotRed" />
+                <div className="flex items-center text-sm lg:text-xs">
+                  <TrendingUp className="w-4 h-4 lg:w-3 lg:h-3 mr-1 text-patriotRed" />
                   <span className="text-patriotWhite font-semibold">
                     Select Charity
                   </span>
@@ -508,7 +508,7 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
 
         {proposal.status === 'active' && (
           <motion.div
-            className="mt-3 xs:mt-4 pt-3 xs:pt-4 border-t border-patriotRed/30 relative z-10 px-3 xs:px-4 sm:px-6 pb-3 xs:pb-4 sm:pb-6"
+            className="mt-4 pt-4 border-t border-patriotRed/30 relative z-10 px-4 sm:px-5 md:px-6 lg:px-6 pb-4 sm:pb-5"
             variants={fadeInVariants}
             initial="initial"
             animate="enter"
@@ -518,7 +518,7 @@ export const HolidayCharityCard: React.FC<HolidayCharityCardProps> = ({
               asChild
               variant="primary"
               size="md"
-              className="w-full font-semibold group-hover:shadow-xl bg-gradient-to-r from-patriotRed to-red-600 hover:from-red-600 hover:to-red-700 min-h-[44px] text-sm xs:text-base"
+              className="w-full font-semibold group-hover:shadow-xl bg-gradient-to-r from-patriotRed to-red-600 hover:from-red-600 hover:to-red-700 min-h-[44px] text-sm lg:text-sm"
             >
               <Link href={`/proposal/${proposal.id}`}>
                 <span className="xs:hidden">🎖️ Vote</span>
