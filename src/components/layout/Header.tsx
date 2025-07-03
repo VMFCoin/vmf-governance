@@ -233,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
               initial="closed"
               animate="open"
               exit="closed"
-              className="lg:hidden border-t border-patriotBlue/30 bg-backgroundLight/95 backdrop-blur-md"
+              className="lg:hidden border-t border-patriotBlue/30 bg-backgroundLight/95 backdrop-blur-md relative z-50"
             >
               <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4">
                 {/* Mobile Navigation Items */}

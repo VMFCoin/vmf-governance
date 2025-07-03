@@ -63,21 +63,19 @@ export const CharityDirectoryContent: React.FC<
         {proposal.charityData.description}
       </p>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 xs:gap-4">
         {proposal.charityData.website && (
-          <div className="flex items-center text-xs text-blue-400">
-            <ExternalLink className="w-3 h-3 mr-1" />
-            <span className="truncate max-w-[200px]">
-              {proposal.charityData.website}
-            </span>
+          <div className="flex items-center text-xs text-blue-400 min-w-0 flex-1">
+            <ExternalLink className="w-3 h-3 mr-1 flex-shrink-0" />
+            <span className="truncate">{proposal.charityData.website}</span>
           </div>
         )}
 
         <div
-          className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs ${verificationStatus.bgColor} ${verificationStatus.color}`}
+          className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs flex-shrink-0 ${verificationStatus.bgColor} ${verificationStatus.color}`}
         >
           {verificationStatus.icon}
-          <span>{verificationStatus.text}</span>
+          <span className="whitespace-nowrap">{verificationStatus.text}</span>
         </div>
       </div>
     </motion.div>

@@ -37,7 +37,13 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import { Button, Card } from '@/components/ui';
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from '@/components/ui';
 import { SimpleTooltip } from '@/components/ui/AnimatedTooltip';
 import { ProfileGuard } from '@/components/auth';
 import { useToast } from '@/components/ui/Toast';
@@ -640,7 +646,147 @@ export function HolidayCharityVoting({
 
   return (
     <ProfileGuard fallbackMessage="You need a profile to vote on holiday charity proposals.">
-      <div className="space-y-8">
+      <div className="space-y-4 xs:space-y-5 sm:space-y-6 md:space-y-8 lg:space-y-10 xl:space-y-12 p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8 xl:p-10">
+        {/* Header Section - Enhanced Mobile Layout */}
+        <motion.div
+          className="flex flex-col xs:flex-row sm:flex-row items-start xs:items-center sm:items-center justify-between gap-3 xs:gap-4 sm:gap-5 md:gap-6 lg:gap-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex-1 w-full xs:w-auto min-w-0">
+            <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-patriotWhite mb-1 xs:mb-2 sm:mb-3">
+              Holiday Charity Voting
+            </h2>
+            <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl text-textSecondary">
+              Vote for your favorite charity to receive holiday donations
+            </p>
+          </div>
+
+          {/* Voting Power Display - Enhanced Mobile Layout */}
+          <div className="flex flex-col xs:flex-row sm:flex-row gap-2 xs:gap-3 sm:gap-4 w-full xs:w-auto">
+            <div className="bg-gradient-to-r from-patriotBlue/20 to-patriotBlue/10 border border-patriotBlue/30 rounded-lg xs:rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-5 md:p-6 backdrop-blur-sm">
+              <div className="text-center xs:text-left sm:text-center">
+                <p className="text-xs xs:text-sm sm:text-base md:text-lg text-textSecondary mb-1 xs:mb-2">
+                  Your Voting Power
+                </p>
+                <p className="text-lg xs:text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-patriotWhite">
+                  {formatVotingPower(totalVotingPower)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Voting Interface - Enhanced responsive */}
+        <motion.div
+          className="space-y-4 xs:space-y-5 sm:space-y-6 md:space-y-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          {/* Voting Controls - Enhanced Mobile Layout */}
+          <Card className="bg-gradient-to-br from-backgroundLight/80 to-backgroundLight/60 backdrop-blur-sm border-patriotBlue/20 hover:border-patriotBlue/40 transition-all duration-300">
+            <CardHeader className="p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8">
+              <CardTitle className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-patriotWhite">
+                Cast Your Vote
+              </CardTitle>
+              <p className="text-xs xs:text-sm sm:text-base md:text-lg text-textSecondary">
+                Select charities and allocate your voting power
+              </p>
+            </CardHeader>
+            <CardContent className="p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8 pt-0">
+              <div className="space-y-3 xs:space-y-4 sm:space-y-5 md:space-y-6">
+                {/* Voting Method Toggle - Enhanced responsive */}
+                <div className="flex flex-col xs:flex-row sm:flex-row gap-2 xs:gap-3 sm:gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowResults(!showResults)}
+                    className="flex-1 min-h-[44px] sm:min-h-[48px] md:min-h-[52px] lg:min-h-[56px] xl:min-h-[60px] text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl px-3 xs:px-4 sm:px-5 md:px-6 lg:px-8 touch-manipulation"
+                  >
+                    <span className="hidden sm:inline">
+                      {showResults ? 'Hide Results' : 'Show Results'}
+                    </span>
+                    <span className="hidden xs:inline sm:hidden">
+                      {showResults ? 'Hide' : 'Show'}
+                    </span>
+                    <span className="xs:hidden">
+                      {showResults ? 'Hide' : 'Show'}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => initializeGaugeData(true)}
+                    disabled={isLoadingGauges}
+                    className="flex-1 min-h-[44px] sm:min-h-[48px] md:min-h-[52px] lg:min-h-[56px] xl:min-h-[60px] text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl px-3 xs:px-4 sm:px-5 md:px-6 lg:px-8 touch-manipulation"
+                  >
+                    <span className="hidden sm:inline">Refresh Data</span>
+                    <span className="hidden xs:inline sm:hidden">Refresh</span>
+                    <span className="xs:hidden">Refresh</span>
+                  </Button>
+                </div>
+
+                {/* Vote Status Display - Enhanced responsive */}
+                {hasVoted && (
+                  <div className="bg-gradient-to-r from-green-500/20 to-green-500/10 border border-green-500/30 rounded-lg xs:rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-5 md:p-6 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 xs:gap-3 sm:gap-4">
+                      <CheckCircle className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs xs:text-sm sm:text-base md:text-lg font-medium text-green-400">
+                          <span className="hidden sm:inline">
+                            You have already voted in this period
+                          </span>
+                          <span className="hidden xs:inline sm:hidden">
+                            Already voted
+                          </span>
+                          <span className="xs:hidden">Voted</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit Button - Enhanced responsive */}
+                <Button
+                  onClick={() => {
+                    if (selectedCharity) {
+                      handleCharityVote(selectedCharity);
+                    }
+                  }}
+                  disabled={
+                    !selectedCharity ||
+                    isSubmitting ||
+                    hasVoted ||
+                    totalVotingPower === BigInt(0) ||
+                    !isVotingActive
+                  }
+                  className="w-full min-h-[44px] sm:min-h-[48px] md:min-h-[52px] lg:min-h-[56px] xl:min-h-[60px] text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl px-3 xs:px-4 sm:px-5 md:px-6 lg:px-8 touch-manipulation bg-gradient-to-r from-patriotRed to-patriotRed/80 hover:from-patriotRed/90 hover:to-patriotRed/70 transition-all duration-300"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 animate-spin" />
+                      <span className="hidden sm:inline">
+                        Submitting Vote...
+                      </span>
+                      <span className="hidden xs:inline sm:hidden">
+                        Submitting...
+                      </span>
+                      <span className="xs:hidden">Voting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Vote className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2" />
+                      <span className="hidden sm:inline">Submit Vote</span>
+                      <span className="hidden xs:inline sm:hidden">Vote</span>
+                      <span className="xs:hidden">Vote</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Hero Section */}
         <motion.div
           className="relative overflow-hidden"
@@ -1281,22 +1427,23 @@ export function HolidayCharityVoting({
               </div>
             )}
 
-            {/* No Charities - Responsive */}
+            {/* No Charities - Enhanced responsive */}
             {!charitiesLoading && availableCharities.length === 0 && (
-              <div className="text-center py-6 sm:py-8">
-                <Users className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-3" />
-                <h4 className="text-base sm:text-lg font-semibold text-white mb-2">
+              <div className="text-center py-8 sm:py-12 md:py-16 lg:py-20 xl:py-24">
+                <Users className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28 text-slate-400 mx-auto mb-4 sm:mb-6 md:mb-8 lg:mb-10" />
+                <h4 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-semibold text-white mb-3 sm:mb-4 md:mb-5 lg:mb-6">
                   No Charities Available
                 </h4>
-                <p className="text-sm sm:text-base text-slate-400">
-                  Charity data is currently unavailable.
+                <p className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-slate-400 leading-relaxed max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto">
+                  Charity data is currently unavailable. Please check back later
+                  or contact support if this issue persists.
                 </p>
               </div>
             )}
 
-            {/* Charity Grid - Fully responsive */}
+            {/* Charity Grid - Fully responsive with enhanced breakpoints */}
             {!charitiesLoading && availableCharities.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-8">
                 {availableCharities.map((charity, index) => {
                   if (!charity) return null;
 
@@ -1315,13 +1462,13 @@ export function HolidayCharityVoting({
                     <motion.div
                       key={charity.id}
                       className={cn(
-                        'group relative border rounded-xl p-3 sm:p-4 md:p-6 transition-all duration-300 overflow-hidden',
+                        'group relative border rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8 transition-all duration-300 overflow-hidden',
                         'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/5 before:to-transparent before:translate-x-[-100%] before:transition-transform before:duration-700',
-                        'touch-manipulation',
+                        'touch-manipulation min-h-[120px] sm:min-h-[140px] md:min-h-[160px] lg:min-h-[180px] xl:min-h-[200px]',
                         isUserVote
                           ? 'border-green-500/60 bg-gradient-to-br from-green-500/20 to-emerald-500/10 shadow-lg shadow-green-500/20'
                           : canVote
-                            ? 'border-slate-600/50 bg-gradient-to-br from-slate-800/40 to-slate-900/60 hover:border-blue-400/60 hover:shadow-xl hover:shadow-blue-500/20 hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-slate-800/40 cursor-pointer'
+                            ? 'border-slate-600/50 bg-gradient-to-br from-slate-800/40 to-slate-900/60 hover:border-blue-400/60 hover:shadow-xl hover:shadow-blue-500/20 hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-slate-800/40 cursor-pointer active:scale-98'
                             : 'border-slate-700/40 bg-gradient-to-br from-slate-800/20 to-slate-900/40 opacity-60'
                       )}
                       onClick={() => {
@@ -1364,10 +1511,10 @@ export function HolidayCharityVoting({
                     >
                       {/* Loading overlay for this specific charity */}
                       {isSubmittingThisCharity && (
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
-                          <div className="flex items-center space-x-3 text-white">
-                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                            <span className="font-medium text-sm sm:text-base">
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl flex items-center justify-center z-20">
+                          <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 text-white">
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 animate-spin" />
+                            <span className="font-medium text-xs sm:text-sm md:text-base lg:text-lg">
                               Submitting Vote...
                             </span>
                           </div>
@@ -1377,7 +1524,7 @@ export function HolidayCharityVoting({
                       {/* Animated background glow */}
                       <div
                         className={cn(
-                          'absolute inset-0 rounded-xl opacity-0 transition-opacity duration-500',
+                          'absolute inset-0 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl opacity-0 transition-opacity duration-500',
                           canVote &&
                             !isSubmittingThisCharity &&
                             'group-hover:opacity-100',
@@ -1387,13 +1534,13 @@ export function HolidayCharityVoting({
                         )}
                       />
 
-                      {/* Content container with 3D transform - Responsive */}
-                      <div className="relative z-10 transform transition-transform duration-300 group-hover:translate-z-4 pb-3 sm:pb-4">
+                      {/* Content container with 3D transform - Enhanced responsive */}
+                      <div className="relative z-10 transform transition-transform duration-300 group-hover:translate-z-4 pb-2 sm:pb-3 md:pb-4 lg:pb-5">
                         <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-2 sm:space-x-3 md:space-x-4 flex-1 min-w-0">
-                            {/* Enhanced charity logo with hover effects - Responsive */}
+                          <div className="flex items-start space-x-2 sm:space-x-3 md:space-x-4 lg:space-x-5 xl:space-x-6 flex-1 min-w-0">
+                            {/* Enhanced charity logo with hover effects - Comprehensive responsive */}
                             <motion.div
-                              className="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gradient-to-br from-slate-700/60 to-slate-800/80 rounded-xl flex-shrink-0 shadow-lg border border-slate-600/30"
+                              className="relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 bg-gradient-to-br from-slate-700/60 to-slate-800/80 rounded-lg sm:rounded-xl md:rounded-2xl flex-shrink-0 shadow-lg border border-slate-600/30"
                               whileHover={
                                 canVote && !isSubmittingThisCharity
                                   ? {
@@ -1413,7 +1560,7 @@ export function HolidayCharityVoting({
                               {/* Animated ring around logo */}
                               <div
                                 className={cn(
-                                  'absolute inset-0 rounded-xl border-2 opacity-0 transition-all duration-300',
+                                  'absolute inset-0 rounded-lg sm:rounded-xl md:rounded-2xl border-2 opacity-0 transition-all duration-300',
                                   canVote &&
                                     !isSubmittingThisCharity &&
                                     'group-hover:opacity-100 group-hover:scale-110',
@@ -1427,41 +1574,41 @@ export function HolidayCharityVoting({
                                 <img
                                   src={charity.logo}
                                   alt={charity.name}
-                                  className="w-5 h-5 sm:w-6 sm:h-6 md:w-10 md:h-10 rounded-lg object-cover transition-transform duration-300 group-hover:scale-110"
+                                  className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 rounded-md sm:rounded-lg md:rounded-xl object-cover transition-transform duration-300 group-hover:scale-110"
                                 />
                               ) : (
-                                <Heart className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-red-400 transition-all duration-300 group-hover:scale-110 group-hover:text-red-300" />
+                                <Heart className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-10 lg:h-10 xl:w-12 xl:h-12 text-red-400 transition-all duration-300 group-hover:scale-110 group-hover:text-red-300" />
                               )}
 
                               {/* Pulse effect for user vote */}
                               {isUserVote && (
-                                <div className="absolute inset-0 rounded-xl bg-green-400/20 animate-pulse" />
+                                <div className="absolute inset-0 rounded-lg sm:rounded-xl md:rounded-2xl bg-green-400/20 animate-pulse" />
                               )}
                             </motion.div>
 
                             <div className="flex-1 min-w-0">
-                              {/* Enhanced header with better animations - Responsive */}
-                              <div className="flex items-start flex-col space-y-2 mb-2 sm:mb-3">
+                              {/* Enhanced header with better animations - Comprehensive responsive */}
+                              <div className="flex items-start flex-col space-y-1 sm:space-y-2 md:space-y-3 mb-2 sm:mb-3 md:mb-4">
                                 <motion.h4
-                                  className="font-bold text-white text-sm sm:text-base md:text-lg leading-tight transition-colors duration-300 group-hover:text-blue-100"
+                                  className="font-bold text-white text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl leading-tight transition-colors duration-300 group-hover:text-blue-100 line-clamp-2"
                                   whileHover={{ scale: 1.02 }}
                                 >
                                   {charity.name}
                                 </motion.h4>
 
-                                <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                                <div className="flex items-center flex-wrap gap-1 sm:gap-1.5 md:gap-2 lg:gap-2.5">
                                   {charity.verification.is501c3 && (
                                     <motion.div
                                       whileHover={{ scale: 1.2, rotate: 360 }}
                                       transition={{ duration: 0.6 }}
                                     >
-                                      <Shield className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-green-400 flex-shrink-0 drop-shadow-lg" />
+                                      <Shield className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 text-green-400 flex-shrink-0 drop-shadow-lg" />
                                     </motion.div>
                                   )}
 
                                   {isUserVote && (
                                     <motion.div
-                                      className="inline-flex items-center space-x-1 px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1 bg-green-500/30 text-green-300 text-xs sm:text-sm rounded-full border border-green-400/50 shadow-lg"
+                                      className="inline-flex items-center space-x-1 px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1 lg:px-4 lg:py-2 bg-green-500/30 text-green-300 text-xs sm:text-sm md:text-base rounded-full border border-green-400/50 shadow-lg"
                                       initial={{ scale: 0, rotate: -180 }}
                                       animate={{ scale: 1, rotate: 0 }}
                                       transition={{
@@ -1477,176 +1624,117 @@ export function HolidayCharityVoting({
                                       </span>
                                     </motion.div>
                                   )}
+
+                                  {/* Voting status indicator */}
+                                  {canVote && (
+                                    <motion.div
+                                      className="inline-flex items-center space-x-1 px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1 lg:px-4 lg:py-2 bg-blue-500/30 text-blue-300 text-xs sm:text-sm md:text-base rounded-full border border-blue-400/50 shadow-lg"
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      transition={{
+                                        type: 'spring',
+                                        stiffness: 300,
+                                        delay: 0.3,
+                                      }}
+                                      whileHover={{ scale: 1.05 }}
+                                    >
+                                      <Vote className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4" />
+                                      <span className="font-medium">
+                                        Available
+                                      </span>
+                                    </motion.div>
+                                  )}
                                 </div>
                               </div>
 
-                              {/* Enhanced description with better typography - Responsive */}
-                              <motion.p
-                                className="text-slate-300 text-xs sm:text-sm md:text-base mb-2 sm:mb-3 md:mb-4 line-clamp-2 leading-relaxed transition-colors duration-300 group-hover:text-slate-200"
-                                whileHover={{ scale: 1.01 }}
-                              >
+                              {/* Enhanced description with responsive typography */}
+                              <p className="text-xs sm:text-sm md:text-base lg:text-lg text-slate-300 leading-relaxed mb-2 sm:mb-3 md:mb-4 lg:mb-5 line-clamp-2 sm:line-clamp-3 md:line-clamp-4 transition-colors duration-300 group-hover:text-slate-200">
                                 {charity.description}
-                              </motion.p>
+                              </p>
 
-                              {/* Enhanced tags with better hover effects - Responsive */}
-                              <div className="flex items-center flex-wrap gap-1 sm:gap-1.5 md:gap-2 text-xs">
-                                <motion.div
-                                  className="px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-300 rounded-lg border border-yellow-500/30 font-medium shadow-sm"
-                                  whileHover={{
-                                    scale: 1.05,
-                                    boxShadow:
-                                      '0 4px 15px rgba(245, 158, 11, 0.3)',
-                                  }}
-                                  transition={{
-                                    type: 'spring',
-                                    stiffness: 400,
-                                  }}
-                                >
-                                  {charity.category.replace('_', ' ')}
-                                </motion.div>
-
-                                <motion.div
-                                  className="px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 rounded-lg border border-blue-500/30 font-medium shadow-sm"
-                                  whileHover={{
-                                    scale: 1.05,
-                                    boxShadow:
-                                      '0 4px 15px rgba(59, 130, 246, 0.3)',
-                                  }}
-                                  transition={{
-                                    type: 'spring',
-                                    stiffness: 400,
-                                  }}
-                                >
-                                  <Users className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 inline mr-1" />
-                                  <span className="hidden sm:inline">
-                                    {charity.impactMetrics.veteransServed.toLocaleString()}{' '}
-                                    served
+                              {/* Enhanced location with responsive icons */}
+                              {charity.location && (
+                                <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 text-xs sm:text-sm md:text-base lg:text-lg text-slate-400 mb-2 sm:mb-3 md:mb-4">
+                                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {typeof charity.location === 'string'
+                                      ? charity.location
+                                      : `${charity.location.city}, ${charity.location.state}`}
                                   </span>
-                                  <span className="sm:hidden">
-                                    {charity.impactMetrics.veteransServed > 1000
-                                      ? `${Math.round(charity.impactMetrics.veteransServed / 1000)}k`
-                                      : charity.impactMetrics.veteransServed}
-                                  </span>
-                                </motion.div>
+                                </div>
+                              )}
 
-                                {charity.website && (
-                                  <motion.a
-                                    href={charity.website}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center space-x-1 px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-3 md:py-1.5 bg-gradient-to-r from-slate-600/50 to-slate-700/50 text-slate-300 hover:text-white rounded-lg transition-all duration-300 border border-slate-500/30 shadow-sm"
-                                    onClick={e => e.stopPropagation()}
-                                    whileHover={{
-                                      scale: 1.05,
-                                      boxShadow:
-                                        '0 4px 15px rgba(71, 85, 105, 0.4)',
-                                      backgroundColor: 'rgba(71, 85, 105, 0.8)',
-                                    }}
-                                    whileTap={{ scale: 0.95 }}
-                                    transition={{
-                                      type: 'spring',
-                                      stiffness: 400,
-                                    }}
-                                  >
-                                    <Globe className="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3" />
-                                    <span className="text-xs font-medium hidden sm:inline">
-                                      Visit
+                              {/* Enhanced voting results section - Responsive */}
+                              {showResults && holidayVotingResults && (
+                                <div className="mt-2 sm:mt-3 md:mt-4 lg:mt-5 p-2 sm:p-3 md:p-4 bg-slate-800/50 rounded-lg sm:rounded-xl border border-slate-700/50">
+                                  <div className="flex items-center justify-between mb-1 sm:mb-2 md:mb-3">
+                                    <span className="text-xs sm:text-sm md:text-base lg:text-lg text-slate-300 font-medium">
+                                      Current Votes
                                     </span>
-                                    <ExternalLink className="w-1.5 h-1.5 sm:w-2 sm:h-2 md:w-2.5 md:h-2.5" />
-                                  </motion.a>
-                                )}
-                              </div>
+                                    <span className="text-xs sm:text-sm md:text-base lg:text-lg text-white font-bold">
+                                      {formatVMFSafe(
+                                        BigInt(charity.votes || 0)
+                                      )}
+                                    </span>
+                                  </div>
+
+                                  {/* Vote percentage bar - Responsive */}
+                                  <div className="w-full bg-slate-700/50 rounded-full h-1.5 sm:h-2 md:h-3 lg:h-4 overflow-hidden">
+                                    <div
+                                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-out"
+                                      style={{
+                                        width: `${charity.percentage || 0}%`,
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center justify-between mt-1 sm:mt-2 md:mt-3">
+                                    <span className="text-xs sm:text-sm md:text-base text-slate-400">
+                                      {charity.percentage?.toFixed(1) || '0.0'}%
+                                    </span>
+                                    <span className="text-xs sm:text-sm md:text-base text-slate-400">
+                                      of total votes
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          {/* Enhanced action button with better animations - Responsive */}
-                          <div className="ml-1 sm:ml-2 md:ml-4 flex-shrink-0">
-                            {isUserVote ? (
+                          {/* Enhanced action button - Responsive */}
+                          <div className="flex flex-col items-end space-y-1 sm:space-y-2 md:space-y-3 ml-2 sm:ml-3 md:ml-4">
+                            {canVote && !isSubmittingThisCharity && (
+                              <motion.button
+                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 touch-manipulation"
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setSelectedCharity(charity.id);
+                                  handleCharityVote(charity.id);
+                                }}
+                              >
+                                <Vote className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-white" />
+                              </motion.button>
+                            )}
+
+                            {isUserVote && (
                               <motion.div
-                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-xl border border-green-400/50 shadow-lg"
+                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full shadow-lg"
                                 initial={{ scale: 0, rotate: -180 }}
                                 animate={{ scale: 1, rotate: 0 }}
                                 transition={{
                                   type: 'spring',
                                   stiffness: 300,
-                                  delay: 0.3,
-                                }}
-                                whileHover={{
-                                  scale: 1.1,
-                                  boxShadow:
-                                    '0 8px 25px rgba(34, 197, 94, 0.4)',
+                                  delay: 0.4,
                                 }}
                               >
-                                <Check className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md-h-6 text-green-300" />
-                              </motion.div>
-                            ) : canVote ? (
-                              <motion.div
-                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl border border-blue-400/50 shadow-lg transition-all duration-300 group-hover:from-blue-400/40 group-hover:to-cyan-400/40 group-hover:border-blue-300/60"
-                                whileHover={{
-                                  scale: 1.15,
-                                  rotate: [0, -10, 10, 0],
-                                  boxShadow:
-                                    '0 8px 25px rgba(59, 130, 246, 0.4)',
-                                }}
-                                whileTap={{ scale: 0.9 }}
-                                transition={{
-                                  type: 'spring',
-                                  stiffness: 400,
-                                  damping: 10,
-                                }}
-                              >
-                                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-blue-300 transition-transform duration-300 group-hover:translate-x-1" />
-                              </motion.div>
-                            ) : (
-                              <motion.div
-                                className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-slate-600/20 to-slate-700/20 rounded-xl border border-slate-500/30"
-                                whileHover={{ scale: 1.05 }}
-                              >
-                                <X className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-slate-400" />
+                                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-white" />
                               </motion.div>
                             )}
                           </div>
                         </div>
                       </div>
-
-                      {/* Enhanced bottom border with gradient animation - moved lower - Responsive */}
-                      <div
-                        className={cn(
-                          'absolute bottom-1.5 sm:bottom-2 left-3 sm:left-4 right-3 sm:right-4 h-0.5 sm:h-1 bg-gradient-to-r transition-all duration-500 rounded-full',
-                          'transform scale-x-0 group-hover:scale-x-100 origin-left',
-                          isUserVote
-                            ? 'from-green-400 via-emerald-400 to-green-500 scale-x-100'
-                            : canVote
-                              ? 'from-blue-400 via-cyan-400 to-blue-500'
-                              : 'from-slate-500 to-slate-600'
-                        )}
-                      />
-
-                      {/* Floating particles effect on hover - Responsive */}
-                      {canVote && (
-                        <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                          {[...Array(6)].map((_, i) => (
-                            <motion.div
-                              key={i}
-                              className="absolute w-0.5 h-0.5 sm:w-1 sm:h-1 bg-blue-400 rounded-full"
-                              style={{
-                                left: `${20 + i * 15}%`,
-                                top: `${30 + (i % 2) * 40}%`,
-                              }}
-                              animate={{
-                                y: [-10, -20, -10],
-                                opacity: [0, 1, 0],
-                                scale: [0, 1, 0],
-                              }}
-                              transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                delay: i * 0.2,
-                              }}
-                            />
-                          ))}
-                        </div>
-                      )}
                     </motion.div>
                   );
                 })}

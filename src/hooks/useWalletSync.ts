@@ -70,8 +70,6 @@ export function useWalletSync() {
 
         // Clear any cached notification data
         localStorage.removeItem('vmf_notifications');
-
-        console.log('🗑️  Cleared localStorage user data');
       } catch (error) {
         console.warn('Failed to clear some localStorage data:', error);
       }

@@ -4,6 +4,43 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Notification } from '@/types';
 
+// Filter-related types for user preferences
+export type SortOption = 'newest' | 'oldest' | 'mostVotes' | 'timeLeft';
+export type FilterOption = 'all' | 'active' | 'passed' | 'failed' | 'pending';
+export type ProposalTypeFilter =
+  | 'all'
+  | 'holiday_charity'
+  | 'charity_directory'
+  | 'platform_feature'
+  | 'legacy';
+
+export interface FilterState {
+  searchTerm: string;
+  sortBy: SortOption;
+  filterBy: FilterOption;
+  proposalTypeFilter: ProposalTypeFilter;
+}
+
+export interface SavedFilterConfiguration {
+  id: string;
+  name: string;
+  filters: FilterState;
+  createdAt: Date;
+  usageCount: number;
+  lastUsed: Date;
+}
+
+export interface FilterAnalytics {
+  mostUsedSort: Record<SortOption, number>;
+  mostUsedStatus: Record<FilterOption, number>;
+  mostUsedType: Record<ProposalTypeFilter, number>;
+  searchHistory: Array<{
+    term: string;
+    timestamp: Date;
+    resultsCount: number;
+  }>;
+}
+
 export interface UserPreferences {
   theme: 'patriotic' | 'dark' | 'light';
   notifications: {
@@ -22,6 +59,25 @@ export interface UserPreferences {
     compactMode: boolean;
     showAnimations: boolean;
     autoPlayVideos: boolean;
+  };
+  filters: {
+    // Default filter preferences
+    defaultSort: SortOption;
+    defaultStatus: FilterOption;
+    defaultType: ProposalTypeFilter;
+    persistSearchTerms: boolean;
+
+    // Saved filter configurations
+    savedConfigurations: SavedFilterConfiguration[];
+
+    // Recent filter combinations (last 10)
+    recentFilters: Array<{
+      filters: FilterState;
+      timestamp: Date;
+    }>;
+
+    // Filter usage analytics
+    analytics: FilterAnalytics;
   };
 }
 
@@ -75,6 +131,23 @@ export interface UserState {
   setHasSeenWelcome: (seen: boolean) => void;
   setLastActiveTab: (tab: string) => void;
 
+  // Filter preference actions
+  saveFilterConfiguration: (name: string, filters: FilterState) => void;
+  deleteFilterConfiguration: (id: string) => void;
+  updateFilterConfiguration: (
+    id: string,
+    updates: Partial<SavedFilterConfiguration>
+  ) => void;
+  addRecentFilter: (filters: FilterState) => void;
+  trackFilterUsage: (filters: FilterState) => void;
+  addSearchToHistory: (term: string, resultsCount: number) => void;
+  updateFilterDefaults: (defaults: {
+    defaultSort?: SortOption;
+    defaultStatus?: FilterOption;
+    defaultType?: ProposalTypeFilter;
+    persistSearchTerms?: boolean;
+  }) => void;
+
   // Computed getters
   getUnreadNotifications: () => Notification[];
   getRecentVotingHistory: (limit?: number) => UserState['votingHistory'];
@@ -85,6 +158,14 @@ export interface UserState {
     abstainVotes: number;
     totalVotingPower: number;
   };
+
+  // Filter preference getters
+  getSavedFilterConfigurations: () => SavedFilterConfiguration[];
+  getFilterConfiguration: (id: string) => SavedFilterConfiguration | null;
+  getRecentFilters: () => FilterState[];
+  getFilterAnalytics: () => FilterAnalytics;
+  getDefaultFilters: () => FilterState;
+  getSmartFilterSuggestions: (currentFilters: FilterState) => FilterState[];
 }
 
 const defaultPreferences: UserPreferences = {
@@ -105,6 +186,37 @@ const defaultPreferences: UserPreferences = {
     compactMode: false,
     showAnimations: true,
     autoPlayVideos: false,
+  },
+  filters: {
+    defaultSort: 'newest',
+    defaultStatus: 'all',
+    defaultType: 'all',
+    persistSearchTerms: true,
+    savedConfigurations: [],
+    recentFilters: [],
+    analytics: {
+      mostUsedSort: {
+        newest: 0,
+        oldest: 0,
+        mostVotes: 0,
+        timeLeft: 0,
+      },
+      mostUsedStatus: {
+        all: 0,
+        active: 0,
+        passed: 0,
+        failed: 0,
+        pending: 0,
+      },
+      mostUsedType: {
+        all: 0,
+        holiday_charity: 0,
+        charity_directory: 0,
+        platform_feature: 0,
+        legacy: 0,
+      },
+      searchHistory: [],
+    },
   },
 };
 
@@ -191,6 +303,173 @@ export const useUserStore = create<UserState>()(
       setHasSeenWelcome: seen => set({ hasSeenWelcome: seen }),
       setLastActiveTab: tab => set({ lastActiveTab: tab }),
 
+      // Filter preference actions
+      saveFilterConfiguration: (name, filters) => {
+        set(state => ({
+          preferences: {
+            ...state.preferences,
+            filters: {
+              ...state.preferences.filters,
+              savedConfigurations: [
+                ...(state.preferences?.filters?.savedConfigurations || []),
+                {
+                  id: `filter-${Date.now()}`,
+                  name,
+                  filters,
+                  createdAt: new Date(),
+                  usageCount: 0,
+                  lastUsed: new Date(),
+                },
+              ],
+            },
+          },
+        }));
+      },
+
+      deleteFilterConfiguration: id => {
+        set(state => ({
+          preferences: {
+            ...state.preferences,
+            filters: {
+              ...state.preferences.filters,
+              savedConfigurations: (
+                state.preferences?.filters?.savedConfigurations || []
+              ).filter(f => f.id !== id),
+            },
+          },
+        }));
+      },
+
+      updateFilterConfiguration: (id, updates) => {
+        set(state => ({
+          preferences: {
+            ...state.preferences,
+            filters: {
+              ...state.preferences.filters,
+              savedConfigurations: (
+                state.preferences?.filters?.savedConfigurations || []
+              ).map(f => (f.id === id ? { ...f, ...updates } : f)),
+            },
+          },
+        }));
+      },
+
+      addRecentFilter: filters => {
+        set(state => ({
+          preferences: {
+            ...state.preferences,
+            filters: {
+              ...state.preferences.filters,
+              recentFilters: [
+                ...(state.preferences?.filters?.recentFilters || []).slice(
+                  0,
+                  9
+                ),
+                {
+                  filters,
+                  timestamp: new Date(),
+                },
+              ],
+            },
+          },
+        }));
+      },
+
+      trackFilterUsage: filters => {
+        set(state => {
+          const currentAnalytics = state.preferences?.filters?.analytics || {
+            mostUsedSort: {},
+            mostUsedStatus: {},
+            mostUsedType: {},
+            searchHistory: [],
+          };
+
+          return {
+            preferences: {
+              ...state.preferences,
+              filters: {
+                ...state.preferences.filters,
+                analytics: {
+                  ...currentAnalytics,
+                  mostUsedStatus: {
+                    ...currentAnalytics.mostUsedStatus,
+                    [filters.filterBy]:
+                      (currentAnalytics.mostUsedStatus[filters.filterBy] || 0) +
+                      1,
+                  },
+                },
+              },
+            },
+          };
+        });
+      },
+
+      addSearchToHistory: (term, resultsCount) => {
+        set(state => {
+          const currentAnalytics = state.preferences?.filters?.analytics || {
+            mostUsedSort: {},
+            mostUsedStatus: {},
+            mostUsedType: {},
+            searchHistory: [],
+          };
+
+          return {
+            preferences: {
+              ...state.preferences,
+              filters: {
+                ...state.preferences.filters,
+                analytics: {
+                  ...currentAnalytics,
+                  searchHistory: [
+                    ...currentAnalytics.searchHistory.slice(0, 9),
+                    {
+                      term,
+                      timestamp: new Date(),
+                      resultsCount,
+                    },
+                  ],
+                },
+              },
+            },
+          };
+        });
+      },
+
+      updateFilterDefaults: defaults => {
+        set(state => {
+          const currentFilters = state.preferences?.filters || {
+            defaultSort: 'newest' as SortOption,
+            defaultStatus: 'all' as FilterOption,
+            defaultType: 'all' as ProposalTypeFilter,
+            persistSearchTerms: false,
+            savedConfigurations: [],
+            recentFilters: [],
+            analytics: {
+              mostUsedSort: {},
+              mostUsedStatus: {},
+              mostUsedType: {},
+              searchHistory: [],
+            },
+          };
+
+          return {
+            preferences: {
+              ...state.preferences,
+              filters: {
+                ...currentFilters,
+                defaultSort: defaults.defaultSort || currentFilters.defaultSort,
+                defaultStatus:
+                  defaults.defaultStatus || currentFilters.defaultStatus,
+                defaultType: defaults.defaultType || currentFilters.defaultType,
+                persistSearchTerms:
+                  defaults.persistSearchTerms ??
+                  currentFilters.persistSearchTerms,
+              },
+            },
+          };
+        });
+      },
+
       // Computed getters
       getUnreadNotifications: () => {
         return get().notifications.filter(n => !n.isRead);
@@ -232,6 +511,114 @@ export const useUserStore = create<UserState>()(
         );
 
         return stats;
+      },
+
+      // Filter preference getters
+      getSavedFilterConfigurations: () => {
+        const state = get();
+        return state.preferences?.filters?.savedConfigurations || [];
+      },
+
+      getFilterConfiguration: id => {
+        const state = get();
+        const configurations =
+          state.preferences?.filters?.savedConfigurations || [];
+        return configurations.find(f => f.id === id) || null;
+      },
+
+      getRecentFilters: () => {
+        const state = get();
+        const recentFilters = state.preferences?.filters?.recentFilters || [];
+        return recentFilters.map(f => f.filters);
+      },
+
+      getFilterAnalytics: () => {
+        const state = get();
+        return (
+          state.preferences?.filters?.analytics || {
+            mostUsedSort: {
+              newest: 0,
+              oldest: 0,
+              mostVotes: 0,
+              timeLeft: 0,
+            },
+            mostUsedStatus: {
+              all: 0,
+              active: 0,
+              passed: 0,
+              failed: 0,
+              pending: 0,
+            },
+            mostUsedType: {
+              all: 0,
+              holiday_charity: 0,
+              charity_directory: 0,
+              platform_feature: 0,
+              legacy: 0,
+            },
+            searchHistory: [],
+          }
+        );
+      },
+
+      getDefaultFilters: () => {
+        const state = get();
+        const filters = state.preferences?.filters;
+
+        return {
+          searchTerm: '',
+          sortBy: filters?.defaultSort || 'newest',
+          filterBy: filters?.defaultStatus || 'all',
+          proposalTypeFilter: filters?.defaultType || 'all',
+        };
+      },
+
+      getSmartFilterSuggestions: currentFilters => {
+        const state = get();
+        const analytics = state.preferences?.filters?.analytics;
+        const suggestions: FilterState[] = [];
+
+        // Return empty suggestions if analytics is not available
+        if (!analytics) {
+          return suggestions;
+        }
+
+        // Generate suggestions based on usage patterns
+        const mostUsedSort = Object.entries(analytics.mostUsedSort).sort(
+          ([, a], [, b]) => b - a
+        )[0]?.[0] as SortOption;
+        const mostUsedStatus = Object.entries(analytics.mostUsedStatus).sort(
+          ([, a], [, b]) => b - a
+        )[0]?.[0] as FilterOption;
+        const mostUsedType = Object.entries(analytics.mostUsedType).sort(
+          ([, a], [, b]) => b - a
+        )[0]?.[0] as ProposalTypeFilter;
+
+        // Suggest most used combination
+        if (mostUsedSort && mostUsedStatus && mostUsedType) {
+          suggestions.push({
+            searchTerm: '',
+            sortBy: mostUsedSort,
+            filterBy: mostUsedStatus,
+            proposalTypeFilter: mostUsedType,
+          });
+        }
+
+        // Suggest recent popular searches
+        const recentSearches = analytics.searchHistory
+          .filter(h => h.resultsCount > 0)
+          .slice(0, 3);
+
+        recentSearches.forEach(search => {
+          suggestions.push({
+            searchTerm: search.term,
+            sortBy: currentFilters.sortBy,
+            filterBy: currentFilters.filterBy,
+            proposalTypeFilter: currentFilters.proposalTypeFilter,
+          });
+        });
+
+        return suggestions;
       },
     }),
     {

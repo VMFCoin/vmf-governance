@@ -16,7 +16,7 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => {
   const baseClasses =
-    'bg-backgroundLight border border-patriotBlue/30 rounded-xl p-6 shadow-lg backdrop-blur-sm';
+    'bg-backgroundLight border border-patriotBlue/30 rounded-xl p-4 xs:p-6 lg:p-8 shadow-lg backdrop-blur-sm';
 
   const variantClasses = {
     default: '',
@@ -52,7 +52,10 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
   ...props
 }) => {
   return (
-    <div className={cn('flex flex-col space-y-1.5 p-6', className)} {...props}>
+    <div
+      className={cn('flex flex-col space-y-1.5 p-4 xs:p-6', className)}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -71,7 +74,7 @@ export const CardTitle: React.FC<CardTitleProps> = ({
   return (
     <h3
       className={cn(
-        'text-2xl font-semibold leading-none tracking-tight text-patriotWhite',
+        'text-lg xs:text-xl lg:text-2xl font-semibold leading-none tracking-tight text-patriotWhite',
         className
       )}
       {...props}
@@ -92,7 +95,7 @@ export const CardContent: React.FC<CardContentProps> = ({
   ...props
 }) => {
   return (
-    <div className={cn('p-6 pt-0', className)} {...props}>
+    <div className={cn('p-4 xs:p-6 pt-0', className)} {...props}>
       {children}
     </div>
   );

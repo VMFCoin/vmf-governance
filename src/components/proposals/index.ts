@@ -3,6 +3,7 @@ export {
   TypeSpecificProposalCard,
   ProposalTypeIndicator,
   BinaryVotingCard,
+  VotingStatusIndicator,
 } from './shared';
 
 // Type-specific cards

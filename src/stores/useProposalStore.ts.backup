@@ -90,10 +90,10 @@ export interface ProposalState {
   ) => proposal is PlatformFeatureProposal;
 
   // Type-safe utilities
-  getTypedProposal: <T extends Proposal>(
-    id: string,
-    type: ProposalType
-  ) => T | null;
+  getTypedProposal: <T extends Proposal>(id: string, type: ProposalType): T | null => {
+    const proposal = get().getProposalById(id);
+    return proposal && proposal.type === type ? (proposal as T) : null;
+  },
   getProposalVotingResults: (proposalId: string) => {
     votingType: 'approval' | 'charity_selection';
     results: any;
@@ -668,10 +668,7 @@ export const useProposalStore = create<ProposalState>()(
         proposal.type === 'platform_feature',
 
       // Type-safe utilities
-      getTypedProposal: <T extends Proposal>(
-        id: string,
-        type: ProposalType
-      ): T | null => {
+      getTypedProposal: <T extends Proposal>(id: string, type: ProposalType): T | null => {
         const proposal = get().getProposalById(id);
         return proposal && proposal.type === type ? (proposal as T) : null;
       },

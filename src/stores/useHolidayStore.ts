@@ -3,7 +3,23 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { MilitaryHoliday, HolidayCharityProposal } from '@/types';
-import { mockMilitaryHolidays } from '@/data/mockData';
+import { getCurrentYearHolidays, getUpcomingHolidays } from '@/data/holidays';
+
+export interface HolidayVotingStatus {
+  isVotingActive: boolean;
+  isVotingUpcoming: boolean;
+  votingStartDate: Date | null;
+  votingEndDate: Date | null;
+  daysUntilVotingStarts: number;
+  daysUntilVotingEnds: number;
+  daysUntilHoliday: number;
+  phase:
+    | 'waiting'
+    | 'voting_soon'
+    | 'voting_active'
+    | 'voting_ended'
+    | 'completed';
+}
 
 export interface HolidayState {
   // Data
@@ -20,6 +36,9 @@ export interface HolidayState {
   updateHoliday: (id: string, updates: Partial<MilitaryHoliday>) => void;
   setSelectedHoliday: (holiday: MilitaryHoliday | null) => void;
 
+  // Initialize with real holiday data
+  initializeWithRealData: () => void;
+
   // Automated proposal generation
   checkForUpcomingHolidays: () => MilitaryHoliday[];
   generateHolidayProposal: (
@@ -27,6 +46,12 @@ export interface HolidayState {
   ) => Promise<HolidayCharityProposal>;
   markProposalGenerated: (proposalId: string) => void;
   isProposalGenerated: (holidayId: string) => boolean;
+
+  // Voting status tracking (Phase 23.2 enhancement)
+  getHolidayVotingStatus: (holidayId: string) => HolidayVotingStatus | null;
+  getActiveVotingHolidays: () => MilitaryHoliday[];
+  getUpcomingVotingHolidays: () => MilitaryHoliday[];
+  getNextHolidayToVoteFor: () => MilitaryHoliday | null;
 
   // Computed getters
   getHolidayById: (id: string) => MilitaryHoliday | undefined;
@@ -41,7 +66,7 @@ export const useHolidayStore = create<HolidayState>()(
   persist(
     (set, get) => ({
       // Initial state
-      holidays: mockMilitaryHolidays,
+      holidays: getCurrentYearHolidays(),
       generatedProposals: [],
       selectedHoliday: null,
       isGeneratingProposal: false,
@@ -64,6 +89,11 @@ export const useHolidayStore = create<HolidayState>()(
       },
 
       setSelectedHoliday: holiday => set({ selectedHoliday: holiday }),
+
+      // Initialize with real holiday data
+      initializeWithRealData: () => {
+        set({ holidays: getCurrentYearHolidays() });
+      },
 
       // Automated proposal generation
       checkForUpcomingHolidays: () => {
@@ -170,6 +200,88 @@ export const useHolidayStore = create<HolidayState>()(
 
       isProposalGenerated: holidayId => {
         return get().generatedProposals.some(id => id.includes(holidayId));
+      },
+
+      // Voting status tracking (Phase 23.2 enhancement)
+      getHolidayVotingStatus: holidayId => {
+        const holiday = get().getHolidayById(holidayId);
+        if (!holiday) {
+          return null;
+        }
+
+        const now = new Date();
+        // Calculate voting dates using the same logic as holidays.ts
+        const votingStartDate = new Date(holiday.date);
+        votingStartDate.setDate(votingStartDate.getDate() - 14); // 2 weeks before
+
+        const votingEndDate = new Date(holiday.date);
+        votingEndDate.setDate(votingEndDate.getDate() - 1); // 1 day before holiday
+
+        const isVotingActive = now >= votingStartDate && now <= votingEndDate;
+        const isVotingUpcoming = now < votingStartDate;
+        const daysUntilVotingStarts = Math.ceil(
+          (votingStartDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const daysUntilVotingEnds = Math.ceil(
+          (votingEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const daysUntilHoliday = Math.ceil(
+          (new Date(holiday.date).getTime() - now.getTime()) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        let phase:
+          | 'waiting'
+          | 'voting_soon'
+          | 'voting_active'
+          | 'voting_ended'
+          | 'completed' = 'waiting';
+        if (isVotingActive) {
+          phase = 'voting_active';
+        } else if (isVotingUpcoming) {
+          phase = 'voting_soon';
+        } else if (now > votingEndDate) {
+          phase = 'voting_ended';
+        } else if (daysUntilHoliday <= 0) {
+          phase = 'completed';
+        }
+
+        return {
+          isVotingActive,
+          isVotingUpcoming,
+          votingStartDate,
+          votingEndDate,
+          daysUntilVotingStarts,
+          daysUntilVotingEnds,
+          daysUntilHoliday,
+          phase,
+        };
+      },
+
+      getActiveVotingHolidays: () => {
+        return get().holidays.filter(
+          holiday =>
+            get().getHolidayVotingStatus(holiday.id)?.isVotingActive === true
+        );
+      },
+
+      getUpcomingVotingHolidays: () => {
+        return get().holidays.filter(
+          holiday =>
+            get().getHolidayVotingStatus(holiday.id)?.isVotingUpcoming === true
+        );
+      },
+
+      getNextHolidayToVoteFor: () => {
+        const now = new Date();
+        const upcomingHolidays = get().getUpcomingHolidays(30);
+        for (const holiday of upcomingHolidays) {
+          const votingStatus = get().getHolidayVotingStatus(holiday.id);
+          if (votingStatus?.isVotingUpcoming === true) {
+            return holiday;
+          }
+        }
+        return null;
       },
 
       // Computed getters

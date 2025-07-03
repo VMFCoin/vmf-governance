@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { Clock, Star, Users, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -28,48 +29,49 @@ export function BinaryVotingCard({
   const getStatusColor = (status: BinaryVotingProposal['status']) => {
     switch (status) {
       case 'active':
-        return 'bg-patriotRed text-patriotWhite shadow-patriot-glow';
+        return 'bg-green-500/20 text-green-400 border-green-500/30';
       case 'passed':
-        return 'bg-green-600 text-white shadow-lg';
+        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'failed':
-        return 'bg-gray-600 text-white shadow-lg';
+        return 'bg-red-500/20 text-red-400 border-red-500/30';
       case 'pending':
-        return 'bg-yellow-600 text-white shadow-lg';
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
       default:
-        return 'bg-gray-600 text-white shadow-lg';
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
 
-  const getThemeColors = (type: BinaryVotingProposal['type']) => {
+  const getThemeColors = (type: string) => {
     switch (type) {
       case 'charity_directory':
         return {
-          hover: 'hover:border-blue-500/70 hover:shadow-lg',
-          gradient: 'from-blue-500/20 to-transparent',
-          text: 'group-hover:text-blue-400',
-          border: 'border-t border-blue-500/30',
+          gradient: 'from-green-500/5 to-emerald-500/5',
+          hover: 'hover:border-green-500/50',
+          text: 'group-hover:text-green-400',
+          border: 'border-t border-green-500/30',
           button:
-            'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800',
-          icon: '🏛️',
+            'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700',
+          icon: '🏥',
         };
       case 'platform_feature':
         return {
-          hover: 'hover:border-purple-500/70 hover:shadow-lg',
-          gradient: 'from-purple-500/20 to-transparent',
-          text: 'group-hover:text-purple-400',
-          border: 'border-t border-purple-500/30',
+          gradient: 'from-blue-500/5 to-indigo-500/5',
+          hover: 'hover:border-blue-500/50',
+          text: 'group-hover:text-blue-400',
+          border: 'border-t border-blue-500/30',
           button:
-            'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800',
-          icon: '⚙️',
+            'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700',
+          icon: '⚡',
         };
       default:
         return {
-          hover: 'hover:border-patriotRed/70 hover:shadow-patriot-glow',
-          gradient: 'from-patriotBlue/20 to-transparent',
-          text: 'group-hover:text-patriotRed',
-          border: 'border-t border-patriotBlue/40',
-          button: 'bg-gradient-to-r from-patriotRed to-red-600',
-          icon: '📄',
+          gradient: 'from-patriotBlue/5 to-patriotRed/5',
+          hover: 'hover:border-patriotBlue/50',
+          text: 'group-hover:text-patriotBlue',
+          border: 'border-t border-patriotBlue/30',
+          button:
+            'bg-gradient-to-r from-patriotBlue to-blue-700 hover:from-blue-700 hover:to-blue-800',
+          icon: '📊',
         };
     }
   };
@@ -105,205 +107,212 @@ export function BinaryVotingCard({
       />
 
       <Link href={`/proposal/${proposal.id}`} className="block relative z-10">
-        <motion.div
-          className="flex items-start justify-between mb-4"
-          variants={fadeInVariants}
-          initial="initial"
-          animate="enter"
-        >
-          <motion.span
-            className={`px-3 py-1.5 rounded-full text-sm font-semibold ${getStatusColor(proposal.status)}`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {proposal.status.charAt(0).toUpperCase() + proposal.status.slice(1)}
-          </motion.span>
-          <div className="text-right">
-            <SimpleTooltip text="Time remaining to vote">
-              <div className="flex items-center text-patriotRed text-sm font-medium">
-                <Clock className="w-4 h-4 mr-1" />
-                {proposal.timeLeft}
-              </div>
-            </SimpleTooltip>
-          </div>
-        </motion.div>
-
-        <motion.h3
-          className={cn(
-            'text-xl font-semibold text-patriotWhite mb-3 transition-colors leading-tight',
-            themeColors.text
-          )}
-          variants={fadeInVariants}
-          initial="initial"
-          animate="enter"
-          transition={{ delay: 0.1 }}
-        >
-          {proposal.title}
-        </motion.h3>
-
-        <motion.div
-          className="flex items-center mb-4"
-          variants={fadeInVariants}
-          initial="initial"
-          animate="enter"
-          transition={{ delay: 0.2 }}
-        >
-          <Star className="w-4 h-4 text-starGold mr-2" />
-          <span className="text-textSecondary text-sm font-medium">
-            by <span className="text-textBase">{proposal.author}</span>
-          </span>
-        </motion.div>
-
-        {/* Type-specific content injection point */}
-        {typeSpecificContent && (
+        {/* Enhanced Mobile Header */}
+        <div className="p-3 xs:p-4 sm:p-6">
           <motion.div
+            className="flex flex-col xs:flex-row items-start xs:items-center justify-between mb-3 xs:mb-4 gap-2 xs:gap-4"
             variants={fadeInVariants}
             initial="initial"
             animate="enter"
-            transition={{ delay: 0.25 }}
           >
-            {typeSpecificContent}
-          </motion.div>
-        )}
-
-        <motion.p
-          className="text-textBase mb-6 line-clamp-3 leading-relaxed opacity-90 group-hover:opacity-100 transition-opacity"
-          variants={fadeInVariants}
-          initial="initial"
-          animate="enter"
-          transition={{ delay: 0.3 }}
-        >
-          {proposal.description ||
-            'No description available for this proposal.'}
-        </motion.p>
-
-        {/* Vote Results Section */}
-        <motion.div
-          className="grid md:grid-cols-2 gap-6 mb-6"
-          variants={fadeInVariants}
-          initial="initial"
-          animate="enter"
-          transition={{ delay: 0.4 }}
-        >
-          {/* Chart Visualization */}
-          <div className="flex justify-center">
-            <VoteChart
-              yesPercentage={proposal.yesPercentage}
-              noPercentage={proposal.noPercentage}
-              abstainPercentage={proposal.abstainPercentage}
-              size="md"
-            />
-          </div>
-
-          {/* Progress Bars */}
-          <div className="space-y-4">
-            {/* Yes Votes */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-green-400 font-semibold">Yes</span>
-                <motion.span
-                  className="text-patriotWhite font-bold"
-                  variants={numberCountVariants}
-                  key={`yes-${proposal.yesPercentage}`}
-                  initial="initial"
-                  animate="update"
-                >
-                  {proposal.yesPercentage}%
-                </motion.span>
-              </div>
-              <div className="w-full bg-backgroundDark rounded-full h-2.5 shadow-inner">
-                <motion.div
-                  className="bg-gradient-to-r from-green-500 to-green-400 h-2.5 rounded-full shadow-sm"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${proposal.yesPercentage}%` }}
-                  transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
-                />
-              </div>
-            </div>
-
-            {/* No Votes */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-red-400 font-semibold">No</span>
-                <motion.span
-                  className="text-patriotWhite font-bold"
-                  variants={numberCountVariants}
-                  key={`no-${proposal.noPercentage}`}
-                  initial="initial"
-                  animate="update"
-                >
-                  {proposal.noPercentage}%
-                </motion.span>
-              </div>
-              <div className="w-full bg-backgroundDark rounded-full h-2.5 shadow-inner">
-                <motion.div
-                  className="bg-gradient-to-r from-red-500 to-red-400 h-2.5 rounded-full shadow-sm"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${proposal.noPercentage}%` }}
-                  transition={{ duration: 1, ease: 'easeOut', delay: 0.6 }}
-                />
-              </div>
-            </div>
-
-            {/* Abstain Votes */}
-            {proposal.abstainPercentage > 0 && (
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-400 font-semibold">Abstain</span>
-                  <motion.span
-                    className="text-patriotWhite font-bold"
-                    variants={numberCountVariants}
-                    key={`abstain-${proposal.abstainPercentage}`}
-                    initial="initial"
-                    animate="update"
-                  >
-                    {proposal.abstainPercentage}%
-                  </motion.span>
+            <motion.span
+              className={`px-2 xs:px-3 py-1 xs:py-1.5 rounded-full text-xs xs:text-sm font-semibold border ${getStatusColor(proposal.status)} order-2 xs:order-1 self-start xs:self-auto`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {proposal.status.charAt(0).toUpperCase() +
+                proposal.status.slice(1)}
+            </motion.span>
+            <div className="text-left xs:text-right w-full xs:w-auto order-1 xs:order-2">
+              <SimpleTooltip text="Time remaining to vote">
+                <div className="flex items-center text-patriotRed text-xs xs:text-sm font-medium">
+                  <Clock className="w-3 h-3 xs:w-4 xs:h-4 mr-1" />
+                  {proposal.timeLeft}
                 </div>
-                <div className="w-full bg-backgroundDark rounded-full h-2.5 shadow-inner">
+              </SimpleTooltip>
+            </div>
+          </motion.div>
+
+          <motion.h3
+            className={cn(
+              'text-lg xs:text-xl font-semibold text-patriotWhite mb-2 xs:mb-3 transition-colors leading-tight',
+              themeColors.text
+            )}
+            variants={fadeInVariants}
+            initial="initial"
+            animate="enter"
+            transition={{ delay: 0.1 }}
+          >
+            {proposal.title}
+          </motion.h3>
+
+          <motion.div
+            className="flex items-center mb-3 xs:mb-4"
+            variants={fadeInVariants}
+            initial="initial"
+            animate="enter"
+            transition={{ delay: 0.2 }}
+          >
+            <Star className="w-3 h-3 xs:w-4 xs:h-4 text-starGold mr-2 flex-shrink-0" />
+            <span className="text-textSecondary text-xs xs:text-sm font-medium truncate">
+              by <span className="text-textBase">{proposal.author}</span>
+            </span>
+          </motion.div>
+
+          {/* Type-specific content injection point */}
+          {typeSpecificContent && (
+            <motion.div
+              className="mb-3 xs:mb-4"
+              variants={fadeInVariants}
+              initial="initial"
+              animate="enter"
+              transition={{ delay: 0.25 }}
+            >
+              {typeSpecificContent}
+            </motion.div>
+          )}
+
+          <motion.p
+            className="text-textBase mb-4 xs:mb-6 line-clamp-3 leading-relaxed opacity-90 group-hover:opacity-100 transition-opacity text-sm xs:text-base"
+            variants={fadeInVariants}
+            initial="initial"
+            animate="enter"
+            transition={{ delay: 0.3 }}
+          >
+            {proposal.description ||
+              'No description available for this proposal.'}
+          </motion.p>
+
+          {/* Vote Results Section - Enhanced Mobile Layout */}
+          <motion.div
+            className="mb-4 xs:mb-6"
+            variants={fadeInVariants}
+            initial="initial"
+            animate="enter"
+            transition={{ delay: 0.4 }}
+          >
+            <div className="flex items-center justify-between text-xs xs:text-sm mb-2">
+              <span className="text-textSecondary">Current Results</span>
+              <span className="text-patriotWhite font-medium">
+                {leadingVote} leading
+              </span>
+            </div>
+
+            {/* Mobile-First Vote Bars */}
+            <div className="space-y-2 xs:space-y-3">
+              {/* Yes Vote */}
+              <motion.div
+                variants={fadeInVariants}
+                initial="initial"
+                animate="enter"
+                transition={{ delay: 0.5 }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs xs:text-sm text-green-400 font-medium">
+                    Yes
+                  </span>
+                  <span className="text-xs xs:text-sm text-green-400 font-bold">
+                    {proposal.yesPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-backgroundDark rounded-full h-1.5 xs:h-2 shadow-inner">
                   <motion.div
-                    className="bg-gradient-to-r from-gray-500 to-gray-400 h-2.5 rounded-full shadow-sm"
+                    className="bg-gradient-to-r from-green-500 to-green-400 h-1.5 xs:h-2 rounded-full shadow-sm"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${proposal.yesPercentage}%` }}
+                    transition={{ duration: 1, ease: 'easeOut', delay: 0.6 }}
+                  />
+                </div>
+              </motion.div>
+
+              {/* No Vote */}
+              <motion.div
+                variants={fadeInVariants}
+                initial="initial"
+                animate="enter"
+                transition={{ delay: 0.55 }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs xs:text-sm text-red-400 font-medium">
+                    No
+                  </span>
+                  <span className="text-xs xs:text-sm text-red-400 font-bold">
+                    {proposal.noPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-backgroundDark rounded-full h-1.5 xs:h-2 shadow-inner">
+                  <motion.div
+                    className="bg-gradient-to-r from-red-500 to-red-400 h-1.5 xs:h-2 rounded-full shadow-sm"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${proposal.noPercentage}%` }}
+                    transition={{ duration: 1, ease: 'easeOut', delay: 0.65 }}
+                  />
+                </div>
+              </motion.div>
+
+              {/* Abstain Vote */}
+              <motion.div
+                variants={fadeInVariants}
+                initial="initial"
+                animate="enter"
+                transition={{ delay: 0.6 }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs xs:text-sm text-gray-400 font-medium">
+                    Abstain
+                  </span>
+                  <span className="text-xs xs:text-sm text-gray-400 font-bold">
+                    {proposal.abstainPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-backgroundDark rounded-full h-1.5 xs:h-2 shadow-inner">
+                  <motion.div
+                    className="bg-gradient-to-r from-gray-500 to-gray-400 h-1.5 xs:h-2 rounded-full shadow-sm"
                     initial={{ width: 0 }}
                     animate={{ width: `${proposal.abstainPercentage}%` }}
                     transition={{ duration: 1, ease: 'easeOut', delay: 0.7 }}
                   />
                 </div>
-              </div>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Footer Stats - Mobile Responsive */}
+          <motion.div
+            className={cn(
+              'flex flex-col xs:flex-row items-start xs:items-center justify-between pt-3 xs:pt-4 gap-2 xs:gap-0',
+              themeColors.border
             )}
-          </div>
-        </motion.div>
+            variants={fadeInVariants}
+            initial="initial"
+            animate="enter"
+            transition={{ delay: 0.8 }}
+          >
+            <SimpleTooltip text="Percentage of eligible voters who have participated">
+              <div className="flex items-center text-textSecondary text-xs xs:text-sm">
+                <Users className="w-3 h-3 xs:w-4 xs:h-4 mr-1" />
+                <span className="font-medium">{totalVotes}% participation</span>
+              </div>
+            </SimpleTooltip>
 
-        <motion.div
-          className={cn(
-            'flex items-center justify-between pt-4',
-            themeColors.border
-          )}
-          variants={fadeInVariants}
-          initial="initial"
-          animate="enter"
-          transition={{ delay: 0.8 }}
-        >
-          <SimpleTooltip text="Percentage of eligible voters who have participated">
-            <div className="flex items-center text-textSecondary text-sm">
-              <Users className="w-4 h-4 mr-1" />
-              <span className="font-medium">{totalVotes}% participation</span>
-            </div>
-          </SimpleTooltip>
-
-          <SimpleTooltip text="Current leading vote option">
-            <div className="flex items-center text-sm">
-              <TrendingUp className="w-4 h-4 mr-1 text-patriotRed" />
-              <span className="text-patriotWhite font-semibold">
-                {leadingVote} leading ({leadingPercentage}%)
-              </span>
-            </div>
-          </SimpleTooltip>
-        </motion.div>
+            <SimpleTooltip text="Current leading vote option">
+              <div className="flex items-center text-xs xs:text-sm">
+                <TrendingUp className="w-3 h-3 xs:w-4 xs:h-4 mr-1 text-patriotRed" />
+                <span className="text-patriotWhite font-semibold">
+                  {leadingVote} leading ({leadingPercentage.toFixed(1)}%)
+                </span>
+              </div>
+            </SimpleTooltip>
+          </motion.div>
+        </div>
       </Link>
 
       {proposal.status === 'active' && (
         <motion.div
-          className={cn('mt-4 pt-4 relative z-10', themeColors.border)}
+          className={cn(
+            'mt-3 xs:mt-4 pt-3 xs:pt-4 relative z-10 px-3 xs:px-4 sm:px-6 pb-3 xs:pb-4 sm:pb-6',
+            themeColors.border
+          )}
           variants={fadeInVariants}
           initial="initial"
           animate="enter"
@@ -314,12 +323,15 @@ export function BinaryVotingCard({
             variant="primary"
             size="md"
             className={cn(
-              'w-full font-semibold group-hover:shadow-xl',
+              'w-full font-semibold group-hover:shadow-xl min-h-[44px] text-sm xs:text-base',
               themeColors.button
             )}
           >
             <Link href={`/proposal/${proposal.id}`}>
-              {themeColors.icon} View & Vote
+              <span className="xs:hidden">{themeColors.icon} Vote</span>
+              <span className="hidden xs:inline">
+                {themeColors.icon} View & Vote
+              </span>
             </Link>
           </Button>
         </motion.div>

@@ -7,20 +7,13 @@ import {
 
 export class ProfileService {
   async getProfile(walletAddress: string): Promise<UserProfile | null> {
-    console.log('ProfileService.getProfile called with:', walletAddress);
     try {
-      console.log(
-        'Making Supabase query for wallet address:',
-        walletAddress.toLowerCase()
-      );
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single();
 
-      console.log('Supabase query result:', { data, error });
-      console.log('Fetched profile:', data);
       if (error && error.code !== 'PGRST116') {
         console.error('Supabase error (not PGRST116):', error);
         throw error;

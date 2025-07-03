@@ -48,4 +48,11 @@ export {
   DashboardStatsSkeleton,
   TableSkeleton,
   LoadingScreenSkeleton,
+  VoteChartSkeleton,
+  DashboardSkeleton,
 } from './SkeletonLoader';
+
+export * from './FilterPanel';
+export { FilterChip } from './FilterChip';
+export { ProposalTypeFilter } from './ProposalTypeFilter';
+export { SortDropdown } from './SortDropdown';
